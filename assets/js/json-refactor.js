@@ -94,15 +94,16 @@ class JSONRefactorer {
         if (btnCopyDebug) {
             btnCopyDebug.addEventListener('click', () => {
                 const con = document.getElementById('json-ai-debugger-console');
-                if (con && con.value) {
-                    navigator.clipboard.writeText(con.value).then(() => {
+                if (con) {
+                    const text = con.innerText || con.textContent || '';
+                    navigator.clipboard.writeText(text).then(() => {
                         window.App?.showToast?.("Log de consola copiado", "success");
                     });
                 }
             });
         }
 
-        // Delegated listener for Individual AI transformation
+        // Delegated listener for Individual AI transformation — routes to applyInlineRule (shows preview popover)
         if (treeContainer) {
             treeContainer.addEventListener('click', async (e) => {
                 const btn = e.target.closest('.node-ai-inline-btn');
@@ -117,61 +118,16 @@ class JSONRefactorer {
                         return;
                     }
                     
-                    // Show Loading state on both inline button and global overlay
-                    const originalHtml = btn.innerHTML;
-                    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-lime-400"></i>`;
-                    if(window.lucide) window.lucide.createIcons({ root: btn });
-                    btn.disabled = true;
-                    
-                    const overlay = document.getElementById('json-loading-overlay');
-                    if(overlay) { overlay.classList.remove('hidden'); overlay.classList.add('flex'); }
-
-                    try {
-                        // Extract current value dynamically based on path
-                        const pathParts = path.split(/[\.\[\]]+/).filter(Boolean);
-                        let currentObj = this.getCurrentState();
-                        for (let i = 1; i < pathParts.length; i++) {
-                            currentObj = currentObj[pathParts[i]];
-                            if(currentObj === undefined) break;
-                        }
-                        
-                        const oldValDisplay = JSON.stringify(currentObj);
-                        const newVal = await this.transformNodeWithAI(key, currentObj, instruction);
-                        
-                        // Validación implícita
-                        if(newVal === undefined) throw new Error("La IA no devolvió un JSON o valor válido.");
-                        
-                        // Copy draft state and mutate safely
-                        if (newVal === currentObj) {
-                            // IA devolvió lo original, fue un estancamiento.
-                            window.App?.showToast?.("La IA no detectó cambios lógicos. Prueba a ser más específico", "warning");
-                        } else {
-                            this.updateNodeValue(path, newVal);
-                            
-                            const successMsg = `Nodo [${key}] actualizado: ${oldValDisplay} -> ${JSON.stringify(newVal)}`;
-                            window.App?.addSystemLog?.('🚀 ' + successMsg, 'AI_JOB_OK');
-                            window.App?.showToast?.("Modificaciones implementadas", "success");
-                        }
-                        
-                        // Toggle logic for manual mode dynamically based on fallback
-                        if (typeof newVal === 'string' && newVal.includes('[REVISIÓN IA:')) {
-                            if (editSwitch && !editSwitch.checked) {
-                                window.App?.showToast?.("Pasando campo a Modo Manual para tu revisión", "warning");
-                                editSwitch.click();
-                            }
-                        } else {
-                            if(editSwitch && editSwitch.checked) {
-                                editSwitch.click(); 
-                            }
-                        }
-                    } catch(error) {
-                        window.App?.showToast?.("Error procesando IA: " + error.message, "error");
-                    } finally {
-                        if(overlay) { overlay.classList.remove('flex'); overlay.classList.add('hidden'); }
-                        btn.innerHTML = originalHtml;
-                        if(window.lucide) window.lucide.createIcons({ root: btn });
-                        btn.disabled = false;
+                    // Get current value from state
+                    const pathParts = path.split(/[\.\[\]]+/).filter(Boolean);
+                    let currentObj = this.getCurrentState();
+                    for (let i = 1; i < pathParts.length; i++) {
+                        if (currentObj === undefined || currentObj === null) break;
+                        currentObj = currentObj[pathParts[i]];
                     }
+
+                    // Route to the 2-step dialog (preview popover + console chat)
+                    await this.applyInlineRule(path, key, currentObj, instruction);
                 }
             });
         }
