@@ -431,9 +431,9 @@ class JSONRefactorer {
             overlay?.classList.remove('flex');
             overlay?.classList.add('hidden');
 
-            this.showPreviewPopover(document.getElementById('json-btn-apply'), 'GLOBAL', 'Documento Completo', 'Transformación Masiva Calculada', () => {
+            this.showPreviewPopover(null, 'GLOBAL', 'Documento Completo', `Transformación Aplicada: "${instruction}"`, () => {
                 this.saveState(result);
-                this.addConsoleChat('🤖 Asistente IA', "Transformación global completada.");
+                this.addConsoleChat('🤖 Asistente IA', "Transformación global completada satisfactoriamente.");
                 if (input) input.value = '';
             });
         } catch (err) {
@@ -464,13 +464,14 @@ class JSONRefactorer {
         const isString = typeof currentValue === 'string';
         let res = currentValue;
         
-        const lowerInst = instruction.toLowerCase();
+        const lowerInst = instruction.toLowerCase().trim();
         
-        // 1. Sustitución específica: "Sustituye 'rojo' por 'verde'"
-        const replaceMatch = instruction.match(/(?:sustitu[iy]e[r]?|cambi[aeo][r]?|reemplaz[aeo][r]?)\s+(?:la\s+|el\s+)?["']?(.*?)["']?\s+por\s+["']?(.*?)["']?/i);
+        // 1. Sustitución Parcial: "Sustituye 'rojo' por 'verde'"
+        // Captura: Sustituye [texto original] por [texto nuevo]
+        const replaceMatch = instruction.match(/(?:sustitu[iy]e[r]?|cambi[aeo][r]?|reemplaz[aeo][r]?)\s+(?:el\s+|la\s+|los\s+|las\s+)?["']?(.*?)["']?\s+(?:por|a)\s+["']?(.*?)["']?$/i);
         
-        // 2. Establecer valor fijo: "Pon 'Hola'" o "Escribe 123"
-        const fullSubstituteMatch = instruction.match(/^(?:pon(?:er)?|escribe(?:r)?|sustitu[iy]e(?:r)?|cambia(?:r)?|reemplaza(?:r)?|modifica(?:r)?)(?:\s+(?:todo\s+)?(?:por|a|como))?\s+["']?(.*?)["']?$/i);
+        // 2. Sobrescritura Total (SET): "Pon 'Hola'", "Cambia a 'Valencia'", "Todo como 'Activo'"
+        const setMatch = instruction.match(/^(?:pon(?:er)?|escribe(?:r)?|todo\s+como|todo\s+a|establece(?:r)?|fija(?:r)?|cambia(?:\s+todo)?\s+(?:a|por))\s+["']?(.*?)["']?$/i);
         
         // 3. Operaciones matemáticas: "+ 50", "* 1.10", "Añade 5"
         const mathMatch = instruction.match(/(?:calcula(?:r)?|suma(?:r)?|multiplica(?:r)?|divide|resta(?:r)?|anade)?\s*([\+\-\*\/])\s*([\d\.,]+)/i);
@@ -484,15 +485,19 @@ class JSONRefactorer {
             if (op === '/') res = currentValue / num;
         }
         else if (replaceMatch && isString) {
-            const toFind = replaceMatch[1];
-            const toReplace = replaceMatch[2];
+            const toFind = replaceMatch[1].trim();
+            const toReplace = replaceMatch[2].trim();
+            // Reemplazo global en la cadena
             res = currentValue.replace(new RegExp(this.escapeRegExp(toFind), 'g'), toReplace);
         }
-        else if (fullSubstituteMatch) {
-            let newVal = fullSubstituteMatch[1];
-            // Intentar preservar tipo si es número
-            if (!isNaN(newVal) && newVal.trim() !== "") res = parseFloat(newVal);
-            else res = newVal;
+        else if (setMatch) {
+            let newVal = setMatch[1].trim();
+            // Intentar preservar tipo si el valor parece número
+            if (!isNaN(newVal.replace(',', '.')) && newVal !== "") {
+                res = parseFloat(newVal.replace(',', '.'));
+            } else {
+                res = newVal;
+            }
         }
         else if (lowerInst.includes("extraer") && (lowerInst.includes("número") || lowerInst.includes("numero")) && isString) {
             res = currentValue.replace(/[^0-9]/g, '');
@@ -503,16 +508,11 @@ class JSONRefactorer {
         else if ((lowerInst.includes("minúscula") || lowerInst.includes("lower")) && isString) {
             res = currentValue.toLowerCase();
         }
-        else if (lowerInst.includes("limpiar") || lowerInst.includes("trim")) {
+        else if (lowerInst.includes("trim") || lowerInst.includes("limpiar")) {
             res = isString ? currentValue.trim() : currentValue;
         }
         else if (lowerInst.includes("iva") && isNumeric) {
             res = Number(parseFloat((currentValue * 1.21).toFixed(2)));
-        }
-        else if (lowerInst.includes("traducir") || lowerInst.includes("inglés") || lowerInst.includes("english")) {
-            // Simulación de traducción para los ejemplos comunes
-            const mocks = { "nombre": "name", "apellido": "surname", "edad": "age", "ciudad": "city" };
-            res = mocks[currentValue.toString().toLowerCase()] || currentValue;
         }
 
         return res;
@@ -562,12 +562,21 @@ class JSONRefactorer {
     showPreviewPopover(anchor, key, oldVal, newVal, onConfirm) {
         document.querySelectorAll('.ai-preview-popover').forEach(p => p.remove());
 
+        const isGlobal = !anchor;
         const popover = document.createElement('div');
-        popover.className = 'ai-preview-popover fixed z-[100] bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 w-80 animate-in fade-in zoom-in duration-200';
+        popover.className = 'ai-preview-popover fixed z-[100] bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-6 w-96 animate-in fade-in zoom-in duration-300';
         
-        const rect = anchor.getBoundingClientRect();
-        popover.style.top = `${rect.bottom + 10}px`;
-        popover.style.left = `${rect.left}px`;
+        if (isGlobal) {
+            // Center on screen
+            popover.style.top = '50%';
+            popover.style.left = '50%';
+            popover.style.transform = 'translate(-50%, -50%)';
+            popover.classList.add('border-lime-500/50');
+        } else {
+            const rect = anchor.getBoundingClientRect();
+            popover.style.top = `${rect.bottom + 10}px`;
+            popover.style.left = `${rect.left}px`;
+        }
 
         popover.innerHTML = `
             <div class="text-xs font-bold text-lime-400 mb-2 uppercase tracking-widest flex items-center">
