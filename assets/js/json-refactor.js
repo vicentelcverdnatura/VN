@@ -399,7 +399,7 @@ class JSONRefactorer {
         }
 
         this.addConsoleChat('Tú', `<b>${key}</b>: "${instruction}"`);
-        this.addConsoleChat('🤖 Gemini', `Analizando el campo <b>${key}</b> con valor <code>${JSON.stringify(originalValue)}</code>...`);
+        this.addConsoleChat('🤖 Asistente IA', `Analizando el campo <b>${key}</b> con valor <code>${JSON.stringify(originalValue)}</code>...`);
         
         const overlay = document.getElementById('json-loading-overlay');
         overlay?.classList.remove('hidden');
@@ -412,16 +412,16 @@ class JSONRefactorer {
 
             const changed = JSON.stringify(previewResult) !== JSON.stringify(originalValue);
             if (!changed) {
-                this.addConsoleChat('🤖 Gemini', `He analizado el valor y no detecté cambios necesarios con esa instrucción. ¿Puedes reformularla?`);
+                this.addConsoleChat('🤖 Asistente IA', `He analizado el valor y no detecté cambios necesarios con esa instrucción. ¿Puedes reformularla?`);
                 window.App?.showToast?.("La IA no detectó cambios para esa instrucción.", "warning");
                 return;
             }
 
-            this.addConsoleChat('🤖 Gemini', `He entendido la instrucción. Propongo cambiar <b>${key}</b> de <span class="text-red-400">${JSON.stringify(originalValue)}</span> a <span class="text-lime-400">${JSON.stringify(previewResult)}</span>. Confirma para aplicar.`);
+            this.addConsoleChat('🤖 Asistente IA', `He entendido la instrucción. Propongo cambiar <b>${key}</b> de <span class="text-red-400">${JSON.stringify(originalValue)}</span> a <span class="text-lime-400">${JSON.stringify(previewResult)}</span>. Confirma para aplicar.`);
 
             this.showPreviewPopover(anchorEl, key, originalValue, previewResult, () => {
                 this.updateNodeValue(path, previewResult);
-                this.addConsoleChat('🤖 Gemini', `✅ Cambio aplicado en <b>${key}</b>.`);
+                this.addConsoleChat('🤖 Asistente IA', `✅ Cambio aplicado en <b>${key}</b>.`);
                 window.App?.showToast?.("Cambio aplicado con éxito", "success");
             });
 
@@ -447,7 +447,7 @@ class JSONRefactorer {
             : Object.keys(data).slice(0, 15).join(', ');
 
         this.addConsoleChat('Tú (Global)', instruction);
-        this.addConsoleChat('🤖 Gemini',
+        this.addConsoleChat('🤖 Asistente IA',
             `He recibido tu instrucción. Voy a analizar el JSON completo y generar la transformación.<br>` +
             `<span class="text-zinc-500">Campos detectados: ${keyList}...</span>`);
         
@@ -460,11 +460,11 @@ class JSONRefactorer {
             overlay?.classList.remove('flex');
             overlay?.classList.add('hidden');
 
-            this.addConsoleChat('🤖 Gemini', `Transformación calculada. Revisa el resultado antes de confirmar.`);
+            this.addConsoleChat('🤖 Asistente IA', `Transformación calculada. Revisa el resultado antes de confirmar.`);
 
             this.showPreviewPopover(null, 'GLOBAL', 'Documento Completo', `Instrucción ejecutada: "${instruction}"`, () => {
                 this.saveState(result);
-                this.addConsoleChat('🤖 Gemini', '✅ Transformación global aplicada al documento.');
+                this.addConsoleChat('🤖 Asistente IA', '✅ Transformación global aplicada al documento.');
                 if (input) input.value = '';
             });
         } catch (err) {
@@ -489,203 +489,217 @@ class JSONRefactorer {
         this.saveState(data);
     }
 
-    simulateInterpretation(currentValue, instruction) {
-        if (!instruction || currentValue === undefined) return currentValue;
-        
-        const isNumeric = typeof currentValue === 'number';
-        const isString = typeof currentValue === 'string';
-        let res = currentValue;
-        
-        const lowerInst = instruction.toLowerCase().trim();
-        
-        // 1. Sustitución Parcial: "Sustituye 'rojo' por 'verde'"
-        // Captura: Sustituye [texto original] por [texto nuevo]
-        const replaceMatch = instruction.match(/(?:sustitu[iy]e[r]?|cambi[aeo][r]?|reemplaz[aeo][r]?)\s+(?:el\s+|la\s+|los\s+|las\s+)?["']?(.*?)["']?\s+(?:por|a)\s+["']?(.*?)["']?$/i);
-        
-        // 2. Sobrescritura Total (SET): "Pon 'Hola'", "Cambia a 'Valencia'", "Todo como 'Activo'"
-        const setMatch = instruction.match(/^(?:pon(?:er)?|escribe(?:r)?|todo\s+como|todo\s+a|establece(?:r)?|fija(?:r)?|cambia(?:\s+todo)?\s+(?:a|por))\s+["']?(.*?)["']?$/i);
-        
-        // 3. Operaciones matemáticas: "+ 50", "* 1.10", "Añade 5"
-        const mathMatch = instruction.match(/(?:calcula(?:r)?|suma(?:r)?|multiplica(?:r)?|divide|resta(?:r)?|anade)?\s*([\+\-\*\/])\s*([\d\.,]+)/i);
+    // =============================================
+    // MOTOR IA LOCAL — Sin API Key, sin conexión
+    // Interpreta lenguaje natural y transforma datos
+    // =============================================
 
-        if (mathMatch && isNumeric) {
-            const op = mathMatch[1];
-            const num = parseFloat(mathMatch[2].replace(',', '.'));
-            if (op === '+') res = currentValue + num;
-            if (op === '-') res = currentValue - num;
-            if (op === '*') res = currentValue * num;
-            if (op === '/') res = currentValue / num;
-        }
-        else if (replaceMatch && isString) {
-            const toFind = replaceMatch[1].trim();
-            const toReplace = replaceMatch[2].trim();
-            // Reemplazo global en la cadena
-            res = currentValue.replace(new RegExp(this.escapeRegExp(toFind), 'g'), toReplace);
-        }
-        else if (setMatch) {
-            let newVal = setMatch[1].trim();
-            // Intentar preservar tipo si el valor parece número
-            if (!isNaN(newVal.replace(',', '.')) && newVal !== "") {
-                res = parseFloat(newVal.replace(',', '.'));
-            } else {
-                res = newVal;
+    escapeRegExp(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    /**
+     * Interpreta una instrucción en lenguaje natural y transforma un valor.
+     * Funciona como una IA: analiza la frase, identifica la intención,
+     * busca en el texto y ejecuta la transformación adecuada.
+     */
+    interpretValue(currentValue, instruction) {
+        if (!instruction || currentValue === undefined || currentValue === null) return currentValue;
+
+        const inst = instruction.trim();
+        const low = inst.toLowerCase();
+        const isStr = typeof currentValue === 'string';
+        const isNum = typeof currentValue === 'number';
+        const isBool = typeof currentValue === 'boolean';
+        const strVal = String(currentValue);
+
+        // ──────────────────────────────────────────
+        // 1. SUSTITUCIÓN PARCIAL  
+        //    "sustituye X por Y", "cambia X por Y", "reemplaza X por Y"
+        // ──────────────────────────────────────────
+        const replacePatterns = [
+            /(?:sustitu[iy]e?r?|cambi[aeo]r?|reemplaz[aeo]r?)\s+(?:el\s+|la\s+|los\s+|las\s+|todo\s+)?["'«](.+?)["'»]\s+(?:por|con|a)\s+["'«](.+?)["'»]/i,
+            /(?:sustitu[iy]e?r?|cambi[aeo]r?|reemplaz[aeo]r?)\s+(.+?)\s+(?:por|con|a)\s+(.+)/i,
+        ];
+        for (const rx of replacePatterns) {
+            const m = inst.match(rx);
+            if (m && isStr) {
+                const find = m[1].trim();
+                const repl = m[2].trim();
+                const result = currentValue.replace(new RegExp(this.escapeRegExp(find), 'gi'), repl);
+                if (result !== currentValue) return result;
             }
         }
-        else if (lowerInst.includes("extraer") && (lowerInst.includes("número") || lowerInst.includes("numero")) && isString) {
-            res = currentValue.replace(/[^0-9]/g, '');
-        }
-        else if ((lowerInst.includes("mayúscula") || lowerInst.includes("upper")) && isString) {
-            res = currentValue.toUpperCase();
-        }
-        else if ((lowerInst.includes("minúscula") || lowerInst.includes("lower")) && isString) {
-            res = currentValue.toLowerCase();
-        }
-        else if (lowerInst.includes("trim") || lowerInst.includes("limpiar")) {
-            res = isString ? currentValue.trim() : currentValue;
-        }
-        else if (lowerInst.includes("iva") && isNumeric) {
-            res = Number(parseFloat((currentValue * 1.21).toFixed(2)));
+
+        // ──────────────────────────────────────────
+        // 2. SOBRESCRITURA TOTAL (SET) 
+        //    "pon X", "escribe X", "todo como X", "establece X", "valor: X"
+        // ──────────────────────────────────────────
+        const setPatterns = [
+            /^(?:pon(?:er)?|escrib[eir]+|fij[aeo]r?|establec[eir]+)\s+(?:como\s+|a\s+|por\s+)?["'«](.+?)["'»]$/i,
+            /^(?:pon(?:er)?|escrib[eir]+|fij[aeo]r?|establec[eir]+)\s+(?:como\s+|a\s+|por\s+)?(.+)$/i,
+            /^(?:todo\s+(?:como|a|por)|cambia\s+todo\s+(?:a|por))\s+["'«]?(.+?)["'»]?$/i,
+            /^(?:valor|value):\s*(.+)$/i,
+        ];
+        for (const rx of setPatterns) {
+            const m = inst.match(rx);
+            if (m) {
+                let val = m[1].trim();
+                if (!isNaN(val.replace(',', '.')) && val !== '') return parseFloat(val.replace(',', '.'));
+                if (val.toLowerCase() === 'true') return true;
+                if (val.toLowerCase() === 'false') return false;
+                return val;
+            }
         }
 
-        return res;
+        // ──────────────────────────────────────────
+        // 3. MATEMÁTICAS  
+        //    "+ 50", "suma 10", "multiplica por 2", "resta 5", "divide entre 3"
+        //    "incrementa un 15%", "sube un 5%", "aplica IVA"
+        // ──────────────────────────────────────────
+        if (isNum) {
+            // Porcentaje: "sube un 5%", "incrementa 15%", "baja un 10%"
+            const pctUp = low.match(/(?:sube?|incrementa?|aumenta?|aplica)\s+(?:un\s+)?(\d+[\.,]?\d*)\s*%/);
+            if (pctUp) return Number((currentValue * (1 + parseFloat(pctUp[1].replace(',', '.')) / 100)).toFixed(2));
+            
+            const pctDown = low.match(/(?:baja|reduce?|descuenta?|disminuye?)\s+(?:un\s+)?(\d+[\.,]?\d*)\s*%/);
+            if (pctDown) return Number((currentValue * (1 - parseFloat(pctDown[1].replace(',', '.')) / 100)).toFixed(2));
+
+            // IVA
+            if (low.includes('iva')) return Number((currentValue * 1.21).toFixed(2));
+
+            // Operador directo: "+ 50", "- 10", "* 2", "/ 3"
+            const directOp = inst.match(/^\s*([\+\-\*\/])\s*([\d\.,]+)\s*$/);
+            if (directOp) {
+                const n = parseFloat(directOp[2].replace(',', '.'));
+                if (directOp[1] === '+') return Number((currentValue + n).toFixed(4));
+                if (directOp[1] === '-') return Number((currentValue - n).toFixed(4));
+                if (directOp[1] === '*') return Number((currentValue * n).toFixed(4));
+                if (directOp[1] === '/') return n !== 0 ? Number((currentValue / n).toFixed(4)) : currentValue;
+            }
+
+            // "suma 10", "resta 5", "multiplica por 2", "divide entre 3"
+            const verbMath = low.match(/(?:suma(?:r|le)?|a[ñn]ade?|agrega)\s+([\d\.,]+)/);
+            if (verbMath) return Number((currentValue + parseFloat(verbMath[1].replace(',', '.'))).toFixed(4));
+            const verbSub = low.match(/(?:resta(?:r|le)?|quita(?:r|le)?)\s+([\d\.,]+)/);
+            if (verbSub) return Number((currentValue - parseFloat(verbSub[1].replace(',', '.'))).toFixed(4));
+            const verbMul = low.match(/(?:multiplica(?:r)?)\s+(?:por\s+)?([\d\.,]+)/);
+            if (verbMul) return Number((currentValue * parseFloat(verbMul[1].replace(',', '.'))).toFixed(4));
+            const verbDiv = low.match(/(?:divide?(?:ir)?)\s+(?:entre\s+|por\s+)?([\d\.,]+)/);
+            if (verbDiv) { const d = parseFloat(verbDiv[1].replace(',', '.')); return d !== 0 ? Number((currentValue / d).toFixed(4)) : currentValue; }
+            
+            // Redondear
+            if (low.includes('redonde')) return Math.round(currentValue);
+        }
+
+        // ──────────────────────────────────────────
+        // 4. TRANSFORMACIONES DE TEXTO
+        // ──────────────────────────────────────────
+        if (isStr) {
+            // Mayúsculas / minúsculas / capitalizar
+            if (low.includes('may') || low === 'upper' || low === 'uppercase') return currentValue.toUpperCase();
+            if (low.includes('min') || low === 'lower' || low === 'lowercase') return currentValue.toLowerCase();
+            if (low.includes('capitaliz') || low.includes('titulo') || low.includes('title')) {
+                return currentValue.replace(/\b\w/g, c => c.toUpperCase());
+            }
+
+            // Extraer números
+            if (low.includes('extraer') && (low.includes('num') || low.includes('cifr') || low.includes('dígit'))) {
+                const nums = currentValue.match(/[\d\.,]+/g);
+                return nums ? nums.join('') : currentValue;
+            }
+            // Extraer letras
+            if (low.includes('extraer') && (low.includes('letra') || low.includes('texto') || low.includes('alfab'))) {
+                return currentValue.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, '').trim();
+            }
+
+            // Primeros N caracteres: "primeros 3", "primeros 5 caracteres"
+            const firstN = low.match(/(?:primer[oa]s?|first)\s+(\d+)/);
+            if (firstN) return currentValue.substring(0, parseInt(firstN[1]));
+
+            // Últimos N caracteres
+            const lastN = low.match(/(?:[uú]ltim[oa]s?|last)\s+(\d+)/);
+            if (lastN) return currentValue.slice(-parseInt(lastN[1]));
+
+            // Limpiar / trim / quitar espacios
+            if (low.includes('limpi') || low.includes('trim') || low.includes('espacio')) {
+                return currentValue.replace(/\s+/g, ' ').trim();
+            }
+
+            // Añadir prefijo: "añade prefijo 'PRE-'"
+            const prefixMatch = inst.match(/(?:a[ñn]ade?|agrega|pon)\s+(?:el\s+)?(?:prefijo|prefix|antes|delante)\s+["'«]?(.+?)["'»]?$/i);
+            if (prefixMatch) return prefixMatch[1].trim() + currentValue;
+
+            // Añadir sufijo: "añade sufijo ' S.L.'"  
+            const suffixMatch = inst.match(/(?:a[ñn]ade?|agrega|pon)\s+(?:el\s+)?(?:sufijo|suffix|detr[aá]s|al\s+final)\s+["'«]?(.+?)["'»]?$/i);
+            if (suffixMatch) return currentValue + suffixMatch[1].trim();
+
+            // Eliminar / borrar texto específico: "elimina 'SL'", "borra los espacios"
+            const removeMatch = inst.match(/(?:elimina(?:r)?|borra(?:r)?|quita(?:r)?)\s+(?:el\s+|la\s+|los\s+|las\s+)?["'«](.+?)["'»]/i);
+            if (removeMatch) return currentValue.replace(new RegExp(this.escapeRegExp(removeMatch[1].trim()), 'gi'), '');
+            
+            const removeAlt = inst.match(/(?:elimina(?:r)?|borra(?:r)?|quita(?:r)?)\s+(.+)/i);
+            if (removeAlt) {
+                const target = removeAlt[1].trim();
+                if (target.includes('espacio')) return currentValue.replace(/\s/g, '');
+                if (target.includes('num') || target.includes('cifr')) return currentValue.replace(/[0-9]/g, '');
+                return currentValue.replace(new RegExp(this.escapeRegExp(target), 'gi'), '');
+            }
+
+            // Invertir
+            if (low.includes('invert') || low.includes('reverse') || low.includes('rev')) {
+                return currentValue.split('').reverse().join('');
+            }
+        }
+
+        // ──────────────────────────────────────────
+        // 5. CONVERSIÓN DE TIPOS
+        // ──────────────────────────────────────────
+        if (low.includes('a número') || low.includes('a numero') || low.includes('to number')) {
+            const n = parseFloat(strVal.replace(/[^\d\.\-]/g, ''));
+            return isNaN(n) ? currentValue : n;
+        }
+        if (low.includes('a texto') || low.includes('a string') || low.includes('to string')) {
+            return String(currentValue);
+        }
+        if (low.includes('a booleano') || low.includes('to bool')) {
+            return Boolean(currentValue);
+        }
+
+        // Sin cambio detectado
+        return currentValue;
     }
 
-    escapeRegExp(string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    // =============================================
-    // MOTOR IA — Gemini REST API
-    // =============================================
-
-    getGeminiApiKey() {
-        return localStorage.getItem('vn_gemini_api_key') || '';
-    }
-
-    promptForApiKey() {
-        const current = this.getGeminiApiKey();
-        const key = window.prompt(
-            '🤖 Introduce tu API Key de Gemini (se guarda sólo en tu navegador):\n' +
-            'Obténla gratis en: https://aistudio.google.com/apikey',
-            current
-        );
-        if (key && key.trim()) {
-            localStorage.setItem('vn_gemini_api_key', key.trim());
-            return key.trim();
+    /**
+     * Aplica una interpretación recursivamente a todo un JSON (para modo Global).
+     * Recorre todas las hojas del objeto/array y transforma cada valor.
+     */
+    transformJSONRecursive(data, instruction) {
+        if (Array.isArray(data)) {
+            return data.map(item => this.transformJSONRecursive(item, instruction));
         }
-        return current;
+        if (data !== null && typeof data === 'object') {
+            const result = {};
+            for (const key of Object.keys(data)) {
+                result[key] = this.transformJSONRecursive(data[key], instruction);
+            }
+            return result;
+        }
+        // Es un valor hoja (string, number, boolean, null)
+        return this.interpretValue(data, instruction);
     }
 
-    async callGeminiAPI(promptText) {
-        let apiKey = this.getGeminiApiKey();
-        if (!apiKey) {
-            apiKey = this.promptForApiKey();
-        }
-        if (!apiKey) throw new Error('Se necesita una API Key de Gemini. Concígurala intro en el campo de prompt.');
-
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        
-        const body = {
-            contents: [{ role: 'user', parts: [{ text: promptText }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
-        };
-
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err?.error?.message || `Error HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    }
-
+    /**
+     * Punto de entrada unificado para la IA.
+     * No necesita token ni conexión. Trabaja 100% local.
+     */
     async callAI(context, instruction, isGlobal = false) {
-        try {
-            let prompt;
-
-            if (isGlobal) {
-                // Análisis de estructura + transformación masiva
-                const keys = Array.isArray(context)
-                    ? Object.keys(context[0] || {}).slice(0, 20)
-                    : Object.keys(context).slice(0, 20);
-
-                prompt = `Eres un experto en archivos JSON y transformación de datos estructurados.
-
-Se te proporciona un archivo JSON. Tu tarea es aplicar la siguiente instrucción de forma inteligente a todos los valores relevantes del JSON:
-
-**INSTRUCCIÓN DEL USUARIO:** "${instruction}"
-
-**ESTRUCTURA** (primeras claves detectadas): ${keys.join(', ')}
-
-**JSON COMPLETO:**
-${JSON.stringify(context, null, 2)}
-
-**REGLAS ESTRICTAS:**
-1. Devuelve ÚNICAMENTE el JSON transformado y válido. Sin explicaciones, sin markdown, sin comentarios.
-2. Respeta la estructura original exacta (claves, tipos, anidamiento).
-3. Sólo modifica los valores que correspondan según la instrucción.
-4. Si la instrucción no aplica a un campo, deja ese campo exactamente igual.
-5. El JSON resultante debe comenzar con { o [ directamente.`;
-
-                const raw = await this.callGeminiAPI(prompt);
-                let cleaned = raw.trim()
-                    .replace(/^```json\s*/i, '')
-                    .replace(/^```\s*/i, '')
-                    .replace(/\s*```$/i, '')
-                    .trim();
-                return JSON.parse(cleaned);
-
-            } else {
-                // Transformación de un único valor
-                const tipo = typeof context;
-                prompt = `Eres un experto en transformación de datos de archivos JSON.
-
-Debes modificar un único valor siguiendo la instrucción del usuario.
-
-**NOMBRE DEL CAMPO:** Desconocido (aplica la regla al valor directamente)
-**VALOR ACTUAL:** ${JSON.stringify(context)}
-**TIPO DE DATO:** ${tipo}
-**INSTRUCCIÓN:** "${instruction}"
-
-**REGLAS ESTRICTAS:**
-1. Responde ÚNICAMENTE con el valor transformado. Cero texto adicional, cero explicaciones.
-2. Si el tipo es string, devuelve el texto directamente sin comillas adicionales.
-3. Si el tipo es number, devuelve solo el número.
-4. Si no es posible aplicar la instrucción a este valor, devuelve el valor original exacto.
-5. Si la instrucción pide sustituir texto, busca en la cadena y reemplaza todas las ocurrencias.
-
-Valor resultante:`;
-
-                let raw = await this.callGeminiAPI(prompt);
-                raw = raw.trim();
-
-                // Intentar preservar tipo numérico
-                if (tipo === 'number') {
-                    const num = parseFloat(raw);
-                    return isNaN(num) ? context : num;
-                }
-                // Intentar preservar tipo booleano
-                if (tipo === 'boolean') {
-                    if (raw.toLowerCase() === 'true') return true;
-                    if (raw.toLowerCase() === 'false') return false;
-                }
-                // Intentar parsear JSON si la respuesta parece un objeto/array
-                if (raw.startsWith('{') || raw.startsWith('[')) {
-                    try { return JSON.parse(raw); } catch(e) {}
-                }
-                return raw;
-            }
-        } catch (err) {
-            console.error('Gemini API Error:', err);
-            // Fallback local si falla la API
-            if (!isGlobal) return this.simulateInterpretation(context, instruction);
-            throw err;
+        if (isGlobal) {
+            // Clonar para no mutar el original
+            const clone = JSON.parse(JSON.stringify(context));
+            return this.transformJSONRecursive(clone, instruction);
+        } else {
+            return this.interpretValue(context, instruction);
         }
     }
 
