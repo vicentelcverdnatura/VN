@@ -398,37 +398,58 @@ class JSONRefactorer {
             return;
         }
 
-        this.addConsoleChat('Tú', `Para <b>${key}</b>: "${instruction}"`);
+        this.addConsoleChat('Tú', `<b>${key}</b>: "${instruction}"`);
+        this.addConsoleChat('🤖 Gemini', `Analizando el campo <b>${key}</b> con valor <code>${JSON.stringify(originalValue)}</code>...`);
         
+        const overlay = document.getElementById('json-loading-overlay');
+        overlay?.classList.remove('hidden');
+        overlay?.classList.add('flex');
+
         try {
-            let previewResult;
-            // Try simulated local logic first for speed
-            previewResult = this.simulateInterpretation(originalValue, instruction);
-            
-            // If local didn't change and instruction is complex, try AI
-            if (previewResult === originalValue && instruction.length > 5) {
-                this.addConsoleChat('🤖 Asistente IA', "Consultando modelo Gemini para interpretación compleja...");
-                previewResult = await this.callAI(originalValue, instruction);
+            const previewResult = await this.callAI(originalValue, instruction, false);
+            overlay?.classList.remove('flex');
+            overlay?.classList.add('hidden');
+
+            const changed = JSON.stringify(previewResult) !== JSON.stringify(originalValue);
+            if (!changed) {
+                this.addConsoleChat('🤖 Gemini', `He analizado el valor y no detecté cambios necesarios con esa instrucción. ¿Puedes reformularla?`);
+                window.App?.showToast?.("La IA no detectó cambios para esa instrucción.", "warning");
+                return;
             }
+
+            this.addConsoleChat('🤖 Gemini', `He entendido la instrucción. Propongo cambiar <b>${key}</b> de <span class="text-red-400">${JSON.stringify(originalValue)}</span> a <span class="text-lime-400">${JSON.stringify(previewResult)}</span>. Confirma para aplicar.`);
 
             this.showPreviewPopover(anchorEl, key, originalValue, previewResult, () => {
                 this.updateNodeValue(path, previewResult);
-                this.addConsoleChat('🤖 Asistente IA', `Cambio aplicado en <b>${key}</b>.`);
-                window.App?.showToast?.("Cambio aplicado", "success");
+                this.addConsoleChat('🤖 Gemini', `✅ Cambio aplicado en <b>${key}</b>.`);
+                window.App?.showToast?.("Cambio aplicado con éxito", "success");
             });
 
         } catch (err) {
-            this.addConsoleChat('Error', err.message);
+            overlay?.classList.remove('flex');
+            overlay?.classList.add('hidden');
+            this.addConsoleChat('Error IA', err.message);
+            window.App?.showToast?.("Error en la IA: " + err.message, "error");
         }
     }
 
     async applyRules() {
         const input = document.getElementById('json-global-prompt');
         const instruction = input?.value.trim();
-        if (!instruction) return;
+        if (!instruction) {
+            window.App?.showToast?.("Escribe una instrucción en el Master Prompt.", "warning");
+            return;
+        }
 
         const data = this.getCurrentState();
+        const keyList = Array.isArray(data)
+            ? Object.keys(data[0] || {}).slice(0, 15).join(', ')
+            : Object.keys(data).slice(0, 15).join(', ');
+
         this.addConsoleChat('Tú (Global)', instruction);
+        this.addConsoleChat('🤖 Gemini',
+            `He recibido tu instrucción. Voy a analizar el JSON completo y generar la transformación.<br>` +
+            `<span class="text-zinc-500">Campos detectados: ${keyList}...</span>`);
         
         const overlay = document.getElementById('json-loading-overlay');
         overlay?.classList.remove('hidden');
@@ -439,15 +460,18 @@ class JSONRefactorer {
             overlay?.classList.remove('flex');
             overlay?.classList.add('hidden');
 
-            this.showPreviewPopover(null, 'GLOBAL', 'Documento Completo', `Transformación Aplicada: "${instruction}"`, () => {
+            this.addConsoleChat('🤖 Gemini', `Transformación calculada. Revisa el resultado antes de confirmar.`);
+
+            this.showPreviewPopover(null, 'GLOBAL', 'Documento Completo', `Instrucción ejecutada: "${instruction}"`, () => {
                 this.saveState(result);
-                this.addConsoleChat('🤖 Asistente IA', "Transformación global completada satisfactoriamente.");
+                this.addConsoleChat('🤖 Gemini', '✅ Transformación global aplicada al documento.');
                 if (input) input.value = '';
             });
         } catch (err) {
             overlay?.classList.remove('flex');
             overlay?.classList.add('hidden');
-            this.addConsoleChat('Error', err.message);
+            this.addConsoleChat('Error IA', err.message);
+            window.App?.showToast?.("Error de la IA: " + err.message, "error");
         }
     }
 
@@ -530,40 +554,138 @@ class JSONRefactorer {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    async callAI(context, instruction, isGlobal = false) {
-        // Safe detection of the AI engine (names vary between Chrome versions)
-        const aiEngine = window.ai?.languageModel || window.ai?.assistant;
+    // =============================================
+    // MOTOR IA — Gemini REST API
+    // =============================================
 
-        if (!aiEngine) {
-            if (isGlobal) {
-                console.warn("IA Local no detectada. Usando fallback de simulación básica para Global.");
-                return context; // For global, we strictly return context if no real AI
-            }
-            return this.simulateInterpretation(context, instruction);
+    getGeminiApiKey() {
+        return localStorage.getItem('vn_gemini_api_key') || '';
+    }
+
+    promptForApiKey() {
+        const current = this.getGeminiApiKey();
+        const key = window.prompt(
+            '🤖 Introduce tu API Key de Gemini (se guarda sólo en tu navegador):\n' +
+            'Obténla gratis en: https://aistudio.google.com/apikey',
+            current
+        );
+        if (key && key.trim()) {
+            localStorage.setItem('vn_gemini_api_key', key.trim());
+            return key.trim();
+        }
+        return current;
+    }
+
+    async callGeminiAPI(promptText) {
+        let apiKey = this.getGeminiApiKey();
+        if (!apiKey) {
+            apiKey = this.promptForApiKey();
+        }
+        if (!apiKey) throw new Error('Se necesita una API Key de Gemini. Concígurala intro en el campo de prompt.');
+
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        
+        const body = {
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+        };
+
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err?.error?.message || `Error HTTP ${res.status}`);
         }
 
-        try {
-            const capabilities = await aiEngine.capabilities();
-            if (capabilities.available === 'no') {
-                throw new Error("Modelo no descargado o no disponible.");
-            }
+        const data = await res.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
 
-            const session = await aiEngine.create();
-            const prompt = isGlobal 
-                ? `Transforma este JSON según la regla: "${instruction}". Devuelve SOLO el JSON resultante.\nJSON:\n${JSON.stringify(context)}`
-                : `Modifica el valor "${context}" con la regla: "${instruction}". Responde SOLO el valor modificado.`;
-            
-            const response = await session.prompt(prompt);
-            let cleaned = response.trim().replace(/^```json/, "").replace(/```$/, "").trim();
-            
-            try {
-                return isGlobal ? JSON.parse(cleaned) : cleaned;
-            } catch (e) {
-                return cleaned;
+    async callAI(context, instruction, isGlobal = false) {
+        try {
+            let prompt;
+
+            if (isGlobal) {
+                // Análisis de estructura + transformación masiva
+                const keys = Array.isArray(context)
+                    ? Object.keys(context[0] || {}).slice(0, 20)
+                    : Object.keys(context).slice(0, 20);
+
+                prompt = `Eres un experto en archivos JSON y transformación de datos estructurados.
+
+Se te proporciona un archivo JSON. Tu tarea es aplicar la siguiente instrucción de forma inteligente a todos los valores relevantes del JSON:
+
+**INSTRUCCIÓN DEL USUARIO:** "${instruction}"
+
+**ESTRUCTURA** (primeras claves detectadas): ${keys.join(', ')}
+
+**JSON COMPLETO:**
+${JSON.stringify(context, null, 2)}
+
+**REGLAS ESTRICTAS:**
+1. Devuelve ÚNICAMENTE el JSON transformado y válido. Sin explicaciones, sin markdown, sin comentarios.
+2. Respeta la estructura original exacta (claves, tipos, anidamiento).
+3. Sólo modifica los valores que correspondan según la instrucción.
+4. Si la instrucción no aplica a un campo, deja ese campo exactamente igual.
+5. El JSON resultante debe comenzar con { o [ directamente.`;
+
+                const raw = await this.callGeminiAPI(prompt);
+                let cleaned = raw.trim()
+                    .replace(/^```json\s*/i, '')
+                    .replace(/^```\s*/i, '')
+                    .replace(/\s*```$/i, '')
+                    .trim();
+                return JSON.parse(cleaned);
+
+            } else {
+                // Transformación de un único valor
+                const tipo = typeof context;
+                prompt = `Eres un experto en transformación de datos de archivos JSON.
+
+Debes modificar un único valor siguiendo la instrucción del usuario.
+
+**NOMBRE DEL CAMPO:** Desconocido (aplica la regla al valor directamente)
+**VALOR ACTUAL:** ${JSON.stringify(context)}
+**TIPO DE DATO:** ${tipo}
+**INSTRUCCIÓN:** "${instruction}"
+
+**REGLAS ESTRICTAS:**
+1. Responde ÚNICAMENTE con el valor transformado. Cero texto adicional, cero explicaciones.
+2. Si el tipo es string, devuelve el texto directamente sin comillas adicionales.
+3. Si el tipo es number, devuelve solo el número.
+4. Si no es posible aplicar la instrucción a este valor, devuelve el valor original exacto.
+5. Si la instrucción pide sustituir texto, busca en la cadena y reemplaza todas las ocurrencias.
+
+Valor resultante:`;
+
+                let raw = await this.callGeminiAPI(prompt);
+                raw = raw.trim();
+
+                // Intentar preservar tipo numérico
+                if (tipo === 'number') {
+                    const num = parseFloat(raw);
+                    return isNaN(num) ? context : num;
+                }
+                // Intentar preservar tipo booleano
+                if (tipo === 'boolean') {
+                    if (raw.toLowerCase() === 'true') return true;
+                    if (raw.toLowerCase() === 'false') return false;
+                }
+                // Intentar parsear JSON si la respuesta parece un objeto/array
+                if (raw.startsWith('{') || raw.startsWith('[')) {
+                    try { return JSON.parse(raw); } catch(e) {}
+                }
+                return raw;
             }
         } catch (err) {
-            console.error("AI Model Error:", err);
-            return isGlobal ? context : this.simulateInterpretation(context, instruction);
+            console.error('Gemini API Error:', err);
+            // Fallback local si falla la API
+            if (!isGlobal) return this.simulateInterpretation(context, instruction);
+            throw err;
         }
     }
 
@@ -612,9 +734,10 @@ class JSONRefactorer {
             popover.remove();
         };
 
-        // Close on click outside
+        // Close on click outside (safe with optional anchor)
         const outside = (e) => {
-            if (!popover.contains(e.target) && !anchor.contains(e.target)) {
+            const clickedAnchor = anchor && anchor.contains(e.target);
+            if (!popover.contains(e.target) && !clickedAnchor) {
                 popover.remove();
                 document.removeEventListener('mousedown', outside);
             }
