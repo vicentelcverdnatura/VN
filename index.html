@@ -64,10 +64,10 @@
                         placeholder="admin" required>
                 </div>
                 <div>
-                    <label class="block mb-2 text-sm font-medium text-zinc-400">Contraseña</label>
+                    <label class="block mb-2 text-sm font-medium text-zinc-400">Contrase&ntilde;a</label>
                     <input type="password" id="password"
                         class="w-full px-4 py-3 text-white transition-colors bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
-                        placeholder="••••••••" required>
+                        placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required>
                 </div>
                 <div id="login-error" class="hidden text-sm text-red-500">Credenciales inválidas.</div>
 
@@ -76,6 +76,86 @@
                     Acceder al Panel
                 </button>
             </form>
+
+            <!-- Gestion de Usuarios -->
+            <div class="mt-6 pt-5 border-t border-zinc-800 text-center">
+                <button id="btn-open-user-mgmt" class="text-xs text-zinc-500 hover:text-lime-400 transition-colors flex items-center justify-center w-full gap-2">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                    Gestión de Usuarios
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Gestion de Usuarios -->
+    <div id="user-mgmt-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-zinc-950/90 backdrop-blur-sm">
+        <div class="relative w-full max-w-md p-8 bg-zinc-900 border border-zinc-700 rounded-3xl shadow-2xl">
+            <button id="btn-close-user-mgmt" class="absolute top-4 right-4 text-zinc-500 hover:text-white transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- PASO 1: Verificar contrasena global admin -->
+            <div id="user-mgmt-step1">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/30">
+                        <i data-lucide="shield-alert" class="w-5 h-5 text-orange-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold">Zona Segura</h3>
+                        <p class="text-xs text-zinc-500">Se requiere contrase&ntilde;a de Administrador Global</p>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-zinc-400">Contrase&ntilde;a Global Admin</label>
+                        <input type="password" id="global-admin-pass"
+                            class="w-full px-4 py-3 text-white bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-orange-500"
+                            placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+                    </div>
+                    <div id="user-mgmt-error" class="hidden text-sm text-red-400 flex items-center gap-1">
+                        <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Contrase&ntilde;a incorrecta.
+                    </div>
+                    <button id="btn-verify-admin" class="w-full py-3 font-semibold text-zinc-950 bg-orange-400 hover:bg-orange-500 rounded-xl transition-all">
+                        Verificar Acceso
+                    </button>
+                </div>
+            </div>
+
+            <!-- PASO 2: Panel de gestion de usuarios -->
+            <div id="user-mgmt-step2" class="hidden">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-500/10 flex items-center justify-center border border-lime-500/30">
+                        <i data-lucide="user-cog" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold">Administrar Usuarios</h3>
+                        <p class="text-xs text-zinc-500">A&ntilde;ade o modifica credenciales</p>
+                    </div>
+                </div>
+
+                <!-- Lista de usuarios activos -->
+                <div class="mb-4">
+                    <p class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">Usuarios Registrados</p>
+                    <div id="users-list" class="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar"></div>
+                </div>
+
+                <!-- Formulario nuevo / editar usuario -->
+                <div class="pt-4 border-t border-zinc-800 space-y-3">
+                    <p class="text-xs font-semibold text-zinc-400 uppercase tracking-widest">A&ntilde;adir / Regenerar Usuario</p>
+                    <input type="text" id="mgmt-username"
+                        class="w-full px-3 py-2 text-sm text-white bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-lime-500"
+                        placeholder="Nombre de usuario">
+                    <input type="password" id="mgmt-password"
+                        class="w-full px-3 py-2 text-sm text-white bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-lime-500"
+                        placeholder="Contrase&ntilde;a nueva">
+                    <div id="user-mgmt-success" class="hidden text-sm text-lime-400 flex items-center gap-1">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> <span id="user-mgmt-success-msg"></span>
+                    </div>
+                    <button id="btn-save-user" class="w-full py-2.5 font-semibold text-zinc-950 bg-lime-400 hover:bg-lime-500 rounded-xl transition-all text-sm">
+                        Guardar Usuario
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

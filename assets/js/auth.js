@@ -24,6 +24,8 @@ const Auth = {
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => this.logout());
         }
+
+        this.initUserMgmt();
     },
 
     async attemptLogin(username, password) {
@@ -32,12 +34,8 @@ const Auth = {
         
         let isValid = false;
 
-        // Mapa local de credenciales - activo siempre (especialmente en protocolo file://)
-        // Si cambias users.toml, actualiza también este mapa
-        const localCredentials = {
-            'admin': ['12345'],
-            'vicentelc': ['admin', '12345']
-        };
+        // Credenciales desde localStorage + base (incluye usuarios creados en Gestion de Usuarios)
+        const localCredentials = this.getStoredUsers();
 
         // Solo intentar fetch si la app está servida bajo HTTP/HTTPS real (no file://)
         const isHttpServed = ['http:', 'https:'].includes(window.location.protocol);
@@ -84,6 +82,142 @@ const Auth = {
             setTimeout(() => box.style.transform = 'translate(-10px, 0)', 200);
             setTimeout(() => box.style.transform = 'translate(0, 0)', 300);
         }
+    },
+
+    // ---- GESTION DE USUARIOS ----
+    GLOBAL_ADMIN_PASS: 'F0rm4C10VN', // También en users.toml (fuente de verdad en HTTP)
+
+    getStoredUsers() {
+        // Leer usuarios de localStorage (persistencia local)
+        const raw = localStorage.getItem('vn_users');
+        const stored = raw ? JSON.parse(raw) : {};
+        
+        // Merge con credenciales base del sistema
+        const base = { admin: ['12345'], vicentelc: ['admin', '12345'] };
+        return Object.assign({}, base, stored);
+    },
+
+    saveStoredUsers(users) {
+        localStorage.setItem('vn_users', JSON.stringify(users));
+    },
+
+    initUserMgmt() {
+        const modal       = document.getElementById('user-mgmt-modal');
+        const btnOpen     = document.getElementById('btn-open-user-mgmt');
+        const btnClose    = document.getElementById('btn-close-user-mgmt');
+        const btnVerify   = document.getElementById('btn-verify-admin');
+        const btnSave     = document.getElementById('btn-save-user');
+        const step1       = document.getElementById('user-mgmt-step1');
+        const step2       = document.getElementById('user-mgmt-step2');
+        const errorEl     = document.getElementById('user-mgmt-error');
+        const successEl   = document.getElementById('user-mgmt-success');
+        const successMsg  = document.getElementById('user-mgmt-success-msg');
+        const adminInput  = document.getElementById('global-admin-pass');
+
+        const openModal = () => {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            step1.classList.remove('hidden');
+            step2.classList.add('hidden');
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+            adminInput.value = '';
+            if (window.lucide) window.lucide.createIcons({ root: modal });
+        };
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        btnOpen?.addEventListener('click', openModal);
+        btnClose?.addEventListener('click', closeModal);
+        modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        // Verificar contraseña global admin
+        btnVerify?.addEventListener('click', () => {
+            const pass = adminInput.value.trim();
+            if (pass === this.GLOBAL_ADMIN_PASS) {
+                errorEl.classList.add('hidden');
+                step1.classList.add('hidden');
+                step2.classList.remove('hidden');
+                this.renderUsersList();
+                if (window.lucide) window.lucide.createIcons({ root: step2 });
+            } else {
+                errorEl.classList.remove('hidden');
+                adminInput.value = '';
+                adminInput.focus();
+            }
+        });
+
+        // Enter en campo admin-pass
+        adminInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') btnVerify?.click();
+        });
+
+        // Guardar usuario nuevo o actualizado
+        btnSave?.addEventListener('click', () => {
+            const usernameVal = document.getElementById('mgmt-username').value.trim().toLowerCase();
+            const passwordVal = document.getElementById('mgmt-password').value.trim();
+
+            if (!usernameVal || !passwordVal) {
+                successEl.classList.add('hidden');
+                return;
+            }
+
+            const users = this.getStoredUsers();
+            const isNew = !users[usernameVal];
+            users[usernameVal] = [passwordVal];
+            this.saveStoredUsers(users);
+            
+            document.getElementById('mgmt-username').value = '';
+            document.getElementById('mgmt-password').value = '';
+            successMsg.textContent = isNew
+                ? `Usuario "${usernameVal}" creado correctamente.`
+                : `Contraseña de "${usernameVal}" actualizada.`;
+            successEl.classList.remove('hidden');
+            this.renderUsersList();
+            if (window.lucide) window.lucide.createIcons({ root: step2 });
+        });
+    },
+
+    renderUsersList() {
+        const container = document.getElementById('users-list');
+        if (!container) return;
+        const users = this.getStoredUsers();
+        container.innerHTML = '';
+        Object.keys(users).forEach(u => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between px-3 py-2 bg-zinc-950/60 border border-zinc-800 rounded-lg';
+            row.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-lime-500/20 flex items-center justify-center">
+                        <i data-lucide="user" class="w-3 h-3 text-lime-400"></i>
+                    </div>
+                    <span class="text-sm text-white font-medium">${u}</span>
+                </div>
+                <button class="btn-delete-user text-xs text-red-500 hover:text-red-400 transition" data-user="${u}">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>`;
+            container.appendChild(row);
+        });
+
+        // Bind delete buttons
+        container.querySelectorAll('.btn-delete-user').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetUser = btn.getAttribute('data-user');
+                // Proteger usuarios base no borrables
+                if (['admin'].includes(targetUser)) {
+                    alert('El usuario "admin" es el usuario del sistema y no puede eliminarse.');
+                    return;
+                }
+                const users = this.getStoredUsers();
+                delete users[targetUser];
+                this.saveStoredUsers(users);
+                this.renderUsersList();
+                if (window.lucide) window.lucide.createIcons({ root: document.getElementById('users-list') });
+            });
+        });
     },
 
     loginSuccess(username) {
