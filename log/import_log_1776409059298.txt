@@ -1,0 +1,27 @@
+=== REPORTE DE IMPORTACIÓN: 17/4/2026, 8:57:39 ===
+
+Importación finalizada. Filas procesadas exitosamente: 379
+Estado: PERFECTO. Cero errores detectados.
+
+=== DIAGNÓSTICO PROFUNDO: ESTRUCTURA DE LA FILA 1 ===
+Columnas extraídas: id, Nombre, Apellidos, Antig., Cat. prof., h., Depart., Departamento Cat., Grupo Encargados, Dept+Grupo, Horas Registradas, CATEGORIA, Categoria a APLICAR, GRUPO, COMPLEMENTO, FRIO, Variable, uuid
+{
+  "id": 44272,
+  "Nombre": "MOSTAFAU",
+  "Apellidos": "HAMDAOUI",
+  "Antig.": "17/04/2025",
+  "Cat. prof.": "Mozo/campo",
+  "h.": 40,
+  "Depart.": "RECICLAJE B",
+  "Departamento Cat.": "RECICLADO",
+  "Grupo Encargados": null,
+  "Dept+Grupo": "RECICLADOG",
+  "Horas Registradas": 1866.59,
+  "CATEGORIA": "G",
+  "Categoria a APLICAR": "G",
+  "GRUPO": 150,
+  "COMPLEMENTO": 0,
+  "FRIO": 0,
+  "Variable": 0,
+  "uuid": "24210f90-ca89-442f-9702-d48b5e8d9e5c"
+}

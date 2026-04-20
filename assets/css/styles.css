@@ -1,0 +1,73 @@
+/* Custom Additions on top of Tailwind */
+:root {
+  color-scheme: dark;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar to hide default but still scroll */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Beautiful dark scrollbars for the datagrid */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(24, 24, 27, 0.5); /* zinc-900 with opacity */
+    border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(82, 82, 91, 0.8); /* zinc-600 */
+    border-radius: 8px;
+    border: 3px solid rgba(24, 24, 27, 0.5); /* Creates padding inside the track */
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(163, 230, 53, 0.6); /* lime hover */
+}
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(82, 82, 91, 0.8) transparent;
+}
+
+/* Glass table row hover */
+tbody tr {
+    transition: background-color 0.2s ease;
+}
+tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Custom Animations */
+@keyframes slideUpFade {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Active Nav state */
+.nav-item.active {
+    background-color: rgba(132, 204, 22, 0.1) !important;
+    color: rgb(163, 230, 53) !important;
+}
+.nav-item.active i {
+    color: rgb(163, 230, 53) !important;
+}

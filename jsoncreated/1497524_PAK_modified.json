@@ -1,0 +1,397 @@
+[
+  {
+    "type": "BeginOrder",
+    "orderNumber": "Ord-1497524",
+    "customer": "Cust-001",
+    "containerType": "Tren",
+    "code": "1.0",
+    "message": "Inicio de pedido",
+    "workType": "Picking"
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714735",
+    "aisle": "Pasillo DR51 Carro 3",
+    "description": "Palma Blanca Ramos Crema",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "CSJ Balda 1",
+    "productName": "055 PL LIS Estrella I (Facho) 055",
+    "productNumber": "1",
+    "upcNumber": "47055",
+    "productCDs": [
+      "47"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 4 unidades",
+    "originalServingQuantity": 4
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714739",
+    "aisle": "Pasillo TA17 Carro 4",
+    "description": "Preservado Flores Natural",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "ESE Balda 1",
+    "productName": "538 F Arroz Natural 538",
+    "productNumber": "111538",
+    "upcNumber": "111538",
+    "productCDs": [
+      "11"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 1 unidades",
+    "originalServingQuantity": 1
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544951",
+    "aisle": "Pasillo TA33 Carro 4",
+    "description": "Plumero Blanco",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "NN2 Balda 3",
+    "productName": "599 Miscanthus Blanco 10 599",
+    "productNumber": "186599",
+    "upcNumber": "186599",
+    "productCDs": [
+      "18"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 8 unidades",
+    "originalServingQuantity": 8
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714736",
+    "aisle": "Pasillo SA34 Carro 4 Articulos 2",
+    "description": "Preservado Rosas Negro",
+    "placecontainer": "mismo pasillo quedan 1",
+    "position": "SSU Balda 2",
+    "productName": "512 Rosa Negro Tallo 512",
+    "productNumber": "29512",
+    "upcNumber": "29512",
+    "productCDs": [
+      "29"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714737",
+    "aisle": "mismo pasillo ultimo producto",
+    "description": "Preservado Verdes Verde",
+    "placecontainer": " Carro 1 Bandeja 1 Carro 1 Bandeja 1",
+    "position": "ZIU Balda 1",
+    "productName": "260 Eucaliptus Cinerea Verde 260",
+    "productNumber": "132260",
+    "upcNumber": "132260",
+    "productCDs": [
+      "13"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 3 unidades",
+    "originalServingQuantity": 3
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544941",
+    "aisle": "Pasillo SA42 Carro 3",
+    "description": "Seco Hierbas/Hojas Amarillo",
+    "placecontainer": "Carro 1 Bandeja 3",
+    "position": "XES Balda 2",
+    "productName": "983 Phalaris Amarillo 250g 983",
+    "productNumber": "99983",
+    "upcNumber": "99983",
+    "productCDs": [
+      "99"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714738",
+    "aisle": "Pasillo TA49 Carro 3",
+    "description": "Preservado Flores Blanco/Verde",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "BGG Balda 3",
+    "productName": "976 Limonium Sinensis Blanco/Verde 976",
+    "productNumber": "105976",
+    "upcNumber": "105976",
+    "productCDs": [
+      "10"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 1 unidades",
+    "originalServingQuantity": 1
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714729",
+    "aisle": "Pasillo SA47 Carro 2 Articulos 2",
+    "description": "Seco Flores Amarillo",
+    "placecontainer": "mismo pasillo quedan 1",
+    "position": "XDK Balda 3",
+    "productName": "940 Achillea Silvestre 940",
+    "productNumber": "61940",
+    "upcNumber": "61940",
+    "productCDs": [
+      "61"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544937",
+    "aisle": "mismo pasillo ultimo producto",
+    "description": "Seco Hierbas/Hojas Naranja claro",
+    "placecontainer": " Carro 1 Bandeja 3 Carro 1 Bandeja 3",
+    "position": "XDK Balda 1",
+    "productName": "209 Phalaris Naranja Claro 150 g 209",
+    "productNumber": "182209",
+    "upcNumber": "182209",
+    "productCDs": [
+      "18"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544957",
+    "aisle": "Pasillo RA23 Carro 3",
+    "description": "Preservado Flores Blanco",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "FUQ Balda 2",
+    "productName": "194 Lunaria Blanco 194",
+    "productNumber": "190194",
+    "upcNumber": "190194",
+    "productCDs": [
+      "19"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 1 unidades",
+    "originalServingQuantity": 1
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714733",
+    "aisle": "Pasillo OA34 Carro 3",
+    "description": "Fertilizantes Blanco",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "VDI Balda 2",
+    "productName": "216 Quick Dip Hidrata 216",
+    "productNumber": "33216",
+    "upcNumber": "33216",
+    "productCDs": [
+      "33"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 1 unidades",
+    "originalServingQuantity": 1
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714734",
+    "aisle": "Pasillo OA42 Carro 4",
+    "description": "Films/Rollos Transparente",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "BAW Balda 1",
+    "productName": "516 Celofan Sisal Blanco 516",
+    "productNumber": "81516",
+    "upcNumber": "81516",
+    "productCDs": [
+      "81"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 1 unidades",
+    "originalServingQuantity": 1
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714732",
+    "aisle": "Pasillo NA44 Carro 2",
+    "description": "Films/Rollos Amarillo",
+    "placecontainer": "Carro 1 Bandeja 3",
+    "position": "LLH Balda 4",
+    "productName": "522 Celofan Frost Amarillo 522",
+    "productNumber": "98522",
+    "upcNumber": "98522",
+    "productCDs": [
+      "98"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 1 unidades",
+    "originalServingQuantity": 1
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544936",
+    "aisle": "Pasillo NA38 Carro 1",
+    "description": "Cintas Natural",
+    "placecontainer": "Carro 1 Bandeja 3",
+    "position": "CHV Balda 2",
+    "productName": "814 Cordon Jute 814",
+    "productNumber": "80814",
+    "upcNumber": "80814",
+    "productCDs": [
+      "80"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 1 unidades",
+    "originalServingQuantity": 1
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714730",
+    "aisle": "Pasillo OA33 Carro 4",
+    "description": "Productos Fitosanitarios Morado",
+    "placecontainer": "Carro 1 Bandeja 3",
+    "position": "YUK Balda 2",
+    "productName": "175 Multinutrientes Orquidea 175",
+    "productNumber": "56175",
+    "upcNumber": "56175",
+    "productCDs": [
+      "56"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 10 unidades",
+    "originalServingQuantity": 10
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714731",
+    "aisle": "Pasillo OA35 Carro 2",
+    "description": "Productos Fitosanitarios Verde Claro",
+    "placecontainer": "Carro 1 Bandeja 3",
+    "position": "DRZ Balda 4",
+    "productName": "658 Abono Orquidea 658",
+    "productNumber": "97658",
+    "upcNumber": "97658",
+    "productCDs": [
+      "97"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "PickingLine",
+    "code": "30714728",
+    "aisle": "Pasillo NA36 Carro 1",
+    "description": "Picks/Colgantes Rosa",
+    "placecontainer": "Carro 1 Bandeja 3",
+    "position": "JFQ Balda 5",
+    "productName": "845 Pick Perro Mimi 845",
+    "productNumber": "118845",
+    "upcNumber": "118845",
+    "productCDs": [
+      "11"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 10 unidades",
+    "originalServingQuantity": 10
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544947",
+    "aisle": "Pasillo OA31 Carro 0",
+    "description": "Cintas Violeta",
+    "placecontainer": "Carro 1 Bandeja 1",
+    "position": "ZBR Balda 1",
+    "productName": "629 Cinta Organza Violeta 629",
+    "productNumber": "175629",
+    "upcNumber": "175629",
+    "productCDs": [
+      "17"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544946",
+    "aisle": "Pasillo LA16 Carro 0 Articulos 2",
+    "description": "Cintas Salmon",
+    "placecontainer": "mismo pasillo quedan 1",
+    "position": "AEH Balda 1",
+    "productName": "812 Cinta Organza Salmon 812",
+    "productNumber": "192812",
+    "upcNumber": "192812",
+    "productCDs": [
+      "19"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "PickingLine",
+    "code": "30544945",
+    "aisle": "mismo pasillo ultimo producto",
+    "description": "Cintas Rosa Claro",
+    "placecontainer": " Carro 1 Bandeja 1 Carro 1 Bandeja 1",
+    "position": "AEH Balda 1",
+    "productName": "820 Cinta Organza Rosa Claro 820",
+    "productNumber": "192820",
+    "upcNumber": "192820",
+    "productCDs": [
+      "19"
+    ],
+    "speakProductName": true,
+    "countdownPick": true,
+    "originalServingCode": "UNIDADES",
+    "originalServingPrompt": "Coge 2 unidades",
+    "originalServingQuantity": 2
+  },
+  {
+    "type": "EndOrder",
+    "orderNumber": "Ord-1497524",
+    "message": "Plaza H1",
+    "code": "1.22"
+  }
+]

@@ -1,0 +1,4 @@
+=== REPORTE DE IMPORTACIÓN: 17/4/2026, 8:31:56 ===
+
+Importación finalizada. Filas procesadas exitosamente: 379
+Estado: PERFECTO. Cero errores detectados.

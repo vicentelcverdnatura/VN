@@ -1,0 +1,27 @@
+=== REPORTE DE IMPORTACIÓN: 17/4/2026, 8:35:17 ===
+
+Importación finalizada. Filas procesadas exitosamente: 379
+Estado: PERFECTO. Cero errores detectados.
+
+=== DIAGNÓSTICO PROFUNDO: ESTRUCTURA DE LA FILA 1 ===
+Columnas extraídas: id, Nombre, Apellidos, Antig., Cat. prof., h., Depart., Departamento Cat., Grupo Encargados, Dept+Grupo, Horas Registradas, CATEGORIA, Categoria a APLICAR, GRUPO, COMPLEMENTO, FRIO, Variable, uuid
+{
+  "id": 49989,
+  "Nombre": "ABDELLATIF",
+  "Apellidos": "SELLAK",
+  "Antig.": "01/04/2026",
+  "Cat. prof.": "Mozo/campo",
+  "h.": 40,
+  "Depart.": "ALMACENAJE",
+  "Departamento Cat.": "RECICLADO",
+  "Grupo Encargados": null,
+  "Dept+Grupo": "RECICLADOI",
+  "Horas Registradas": 87.48,
+  "CATEGORIA": "I0",
+  "Categoria a APLICAR": "I",
+  "GRUPO": 0,
+  "COMPLEMENTO": 0,
+  "FRIO": 0,
+  "Variable": 0,
+  "uuid": "914c2279-f752-4069-8a59-2a4b81a49b57"
+}
