@@ -668,25 +668,124 @@ REGLA ESTRICTA: Responde ÚNICAMENTE con el dato modificado. Si no logras aplica
         if (window.lucide) window.lucide.createIcons({ root: msg });
     }
 
-    async applyInlineRule(path, key, value, instruction) {
-        if (!instruction) return;
-        
-        const lowerQ = instruction.toLowerCase();
-        
-        if (lowerQ === 'si' || lowerQ === 'sí' || lowerQ === 'aplica') {
-            if (!this.pendingAction || this.pendingAction.type !== 'inline') return;
-            this.addConsoleChat('Tú', 'Sí');
-            this.executePendingAction();
-            return;
+    showPreviewPopover(anchorEl, key, original, transformed, onConfirm) {
+        // Remove any existing popover
+        document.querySelectorAll('.ai-preview-popover').forEach(p => p.remove());
+
+        const changed = String(original) !== String(transformed);
+        const popover = document.createElement('div');
+        popover.className = 'ai-preview-popover';
+        popover.style.cssText = `
+            position: fixed;
+            z-index: 9999;
+            background: #18181b;
+            border: 1px solid #3f3f46;
+            border-radius: 14px;
+            padding: 16px 18px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+            min-width: 280px;
+            max-width: 420px;
+            font-family: 'Inter', sans-serif;
+            animation: fadeIn 0.15s ease;
+        `;
+
+        const arrowColor = changed ? '#a3e635' : '#ef4444';
+        const statusIcon = changed ? '✅' : '⚠️';
+        const statusMsg  = changed
+            ? `Cadena resultante calculada:`
+            : `Sin cambios detectados para este valor.`;
+
+        popover.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                <div style="width:28px;height:28px;border-radius:8px;background:rgba(163,230,53,0.1);border:1px solid rgba(163,230,53,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;">🤖</div>
+                <div>
+                    <div style="color:#fff;font-weight:700;font-size:13px;">Asistente IA &mdash; Vista Previa</div>
+                    <div style="color:#71717a;font-size:11px;">Nodo: <b style="color:#a3e635">[${key}]</b></div>
+                </div>
+                <button class="popover-close-btn" style="margin-left:auto;background:none;border:none;color:#52525b;cursor:pointer;font-size:16px;line-height:1;">&#x2715;</button>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-start;">
+                <div style="flex:1;">
+                    <div style="color:#71717a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Valor Original</div>
+                    <div style="background:#09090b;border:1px solid #27272a;border-radius:8px;padding:8px 10px;color:#f87171;font-family:monospace;font-size:12px;word-break:break-all;">${String(original)}</div>
+                </div>
+                <div style="color:#71717a;font-size:18px;margin-top:22px;">&#8594;</div>
+                <div style="flex:1;">
+                    <div style="color:#71717a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Resultado</div>
+                    <div style="background:#09090b;border:1px solid ${arrowColor}55;border-radius:8px;padding:8px 10px;color:${arrowColor};font-family:monospace;font-size:12px;word-break:break-all;">${String(transformed)}</div>
+                </div>
+            </div>
+
+            <div style="color:#a1a1aa;font-size:12px;margin-bottom:14px;">${statusMsg}</div>
+
+            <div style="display:flex;gap:8px;">
+                <button class="popover-cancel-btn" style="flex:1;padding:9px;background:#27272a;border:none;border-radius:10px;color:#a1a1aa;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;">Cancelar</button>
+                <button class="popover-apply-btn" style="flex:2;padding:9px;background:${changed?'#a3e635':'#71717a'};border:none;border-radius:10px;color:#09090b;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;${!changed?'opacity:.5;cursor:not-allowed;':''}">${changed?'Aplicar Cambio':'Sin Cambios'}</button>
+            </div>
+        `;
+
+        // Position near anchor element
+        document.body.appendChild(popover);
+        if (anchorEl) {
+            const rect = anchorEl.getBoundingClientRect();
+            let top = rect.bottom + 8;
+            let left = rect.left;
+            // Keep within viewport
+            if (left + 420 > window.innerWidth) left = window.innerWidth - 440;
+            if (top + 250 > window.innerHeight) top = rect.top - 260;
+            popover.style.top = top + 'px';
+            popover.style.left = left + 'px';
+        } else {
+            // Center screen
+            popover.style.top = '50%';
+            popover.style.left = '50%';
+            popover.style.transform = 'translate(-50%, -50%)';
         }
 
+        const close = () => popover.remove();
+        popover.querySelector('.popover-close-btn').addEventListener('click', close);
+        popover.querySelector('.popover-cancel-btn').addEventListener('click', close);
+        popover.querySelector('.popover-apply-btn').addEventListener('click', () => {
+            if (changed) { close(); onConfirm(); }
+        });
+
+        // Close on outside click
+        setTimeout(() => {
+            document.addEventListener('click', function outsideClick(e) {
+                if (!popover.contains(e.target)) {
+                    close();
+                    document.removeEventListener('click', outsideClick);
+                }
+            });
+        }, 100);
+    },
+
+    async applyInlineRule(path, key, value, instruction) {
+        if (!instruction) return;
+
         this.addConsoleChat('Tú', instruction);
+        
+        // Calcular resultado inmediatamente para mostrar vista previa
+        let previewResult;
+        if (window.ai && window.ai.languageModel) {
+            previewResult = await this.callNativeChromeAISingle(value, instruction).catch(() => this.simulateAIInterpretation(value, instruction));
+        } else {
+            previewResult = this.simulateAIInterpretation(value, instruction);
+        }
+
+        // Anchor: el botón del rayo del nodo si existe
+        const nodeEl = document.querySelector(`.node-ai-inline-btn[data-path="${path}"]`);
+        
         this.pendingAction = {
-            type: 'inline', path: path, key: key, originalValue: value, instruction: instruction
+            type: 'inline', path, key, originalValue: value, instruction, previewResult
         };
 
-        this.addConsoleChat('🤖 Asistente IA', `He analizado el nodo exacto <b>[${key}]</b>. El valor detectado es: <span class="bg-zinc-800 px-1 rounded text-zinc-400">"${value}"</span>.\nHe interpretado tu instrucción. ¿Deseas que genere el código JSON perfecto y actualizado listo para copiar y pegar en tu entorno? Responde <b>"Sí"</b>.`);
-    }
+        this.showPreviewPopover(nodeEl, key, value, previewResult, () => {
+            this.addConsoleChat('🤖 Asistente IA', `Aplicando cambio en nodo <b>[${key}]</b>: <span class="text-red-400">${value}</span> → <span class="text-lime-400">${previewResult}</span>`);
+            this.executePendingAction();
+        });
+    },
 
     // --- Global Mass Transformation Logic ---
     async applyRules() {
@@ -696,32 +795,53 @@ REGLA ESTRICTA: Responde ÚNICAMENTE con el dato modificado. Si no logras aplica
 
         const lowerQ = instructionText.toLowerCase();
 
-        // Execution Confirmation flow
+        // Execution Confirmation flow (si responde "sí" sin popover -> ejecutar directo)
         if (lowerQ === 'si' || lowerQ === 'sí' || lowerQ === 'aplica' || lowerQ === 'generar') {
-            this.addConsoleChat('Tú', 'Sí');
             if (!this.pendingAction || this.pendingAction.type !== 'global') {
                 this.addConsoleChat('🤖 Asistente IA', "¿A qué orden global te refieres? Dime primero qué deseas transformar en todo el documento.");
                 globalPrompt.value = '';
                 return;
             }
-            this.executePendingAction();
             globalPrompt.value = '';
+            this.executePendingAction();
             return;
         }
 
         this.addConsoleChat('Tú', instructionText);
 
-        this.pendingAction = {
-            type: 'global',
-            instruction: instructionText,
-            data: JSON.parse(JSON.stringify(this.getCurrentState()))
-        };
-
-        const data = this.pendingAction.data;
+        const data = JSON.parse(JSON.stringify(this.getCurrentState()));
         let keys = Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : Object.keys(data);
         const sample = keys.slice(0, 7).join(', ');
 
-        this.addConsoleChat('🤖 Asistente IA', `He analizado tu archivo JSON y su estructura general.\n<b>Variables/Labels detectadas:</b> <span class="text-zinc-500">${sample}...</span>\n\nEntiendo tu orden para aplicar cambios masivos respetando siempre la sintaxis. ¿Deseas que proceda a aplicar los cambios en la estructura y te genere el código JSON perfecto para copiar y pegar? Responde <b>"Sí"</b> (En este mismo cuadro de texto o confirmando).`);
+        // Calcular una muestra de cómo quedará el primer elemento
+        let previewSample = '';
+        try {
+            const firstItem = Array.isArray(data) ? data[0] : data;
+            if (firstItem && typeof firstItem === 'object') {
+                const firstKey = Object.keys(firstItem)[0];
+                const firstVal = firstItem[firstKey];
+                const previewTransformed = this.simulateAIInterpretation(firstVal, instructionText);
+                if (String(previewTransformed) !== String(firstVal)) {
+                    previewSample = `\n<b>Ejemplo de cambio detectado:</b>\n<span class="text-red-400 font-mono text-xs">${firstVal}</span> → <span class="text-lime-400 font-mono text-xs">${previewTransformed}</span>`;
+                }
+            }
+        } catch(e) {}
+
+        this.pendingAction = {
+            type: 'global',
+            instruction: instructionText,
+            data: data
+        };
+
+        // Mostrar popover centrado para confirmacion global
+        const applyBtn = document.getElementById('json-btn-apply');
+        this.showPreviewPopover(applyBtn, 'GLOBAL', `${keys.length} campos en ${Array.isArray(data) ? data.length : 1} registros`, `Transformación: "${instructionText}"${previewSample ? ' (ver muestra)' : ''}`, () => {
+            this.addConsoleChat('🤖 Asistente IA', `Ejecutando transformación masiva.\n<b>Variables afectadas:</b> <span class="text-zinc-500 text-xs">${sample}...</span>${previewSample}`);
+            this.executePendingAction();
+        });
+
+        globalPrompt.value = '';
+    },e texto o confirmando).`);
         globalPrompt.value = '';
     }
 
