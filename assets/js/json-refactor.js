@@ -355,28 +355,36 @@ class JSONRefactorer {
         const viewer = document.getElementById('json-diff-viewer');
         if (!viewer) return;
 
-        const currentText = JSON.stringify(this.getCurrentState(), null, 2);
-        const originalText = JSON.stringify(this.originalJSON, null, 2);
+        const currentData = this.getCurrentState();
+        const currentText = JSON.stringify(currentData, null, 4);
+        const originalText = JSON.stringify(this.originalJSON, null, 4);
 
         if (currentText === originalText) {
-            viewer.innerHTML = `<span class="text-zinc-500">${currentText.replace(/</g, "&lt;")}</span>`;
+            viewer.innerHTML = `<div class="text-zinc-500 italic p-2 opacity-50">// No hay cambios respecto al archivo original</div><div class="p-2">${currentText.replace(/</g, "&lt;")}</div>`;
             return;
         }
 
         if (typeof JsDiff === 'undefined') {
-            viewer.textContent = currentText;
+            viewer.innerHTML = `<div class="text-orange-400 p-2">JsDiff no detectado. Mostrando JSON actual:</div><pre class="p-2">${currentText.replace(/</g, "&lt;")}</pre>`;
             return;
         }
 
         try {
-            const diff = JsDiff.diffJson(this.originalJSON, this.getCurrentState());
-            let html = '';
+            const diff = JsDiff.diffJson(this.originalJSON, currentData);
+            let html = '<div class="bg-zinc-950/50 p-2 border-b border-zinc-800 mb-2 text-[10px] uppercase font-bold text-zinc-500 tracking-widest flex items-center justify-between"><span>Comparativa de Cambios (Unified Diff)</span><span class="text-lime-500">Documento en Memoria</span></div>';
+            
             diff.forEach(part => {
-                const color = part.added ? 'text-green-400 bg-green-500/10' : 
-                              part.removed ? 'text-red-400 bg-red-500/10 line-through' : 'text-zinc-400';
-                html += `<span class="${color}">${part.value.replace(/</g, "&lt;")}</span>`;
+                const escapedValue = part.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                if (part.added) {
+                    html += `<div class="bg-green-500/10 text-green-400 px-1 border-l-2 border-green-500 font-bold"><span class="opacity-50 mr-2 font-mono">+</span>${escapedValue}</div>`;
+                } else if (part.removed) {
+                    html += `<div class="bg-red-500/10 text-red-400 px-1 border-l-2 border-red-500 line-through opacity-70"><span class="opacity-50 mr-2 font-mono">-</span>${escapedValue}</div>`;
+                } else {
+                    html += `<div class="text-zinc-500 px-1 opacity-50"><span class="opacity-0 mr-2"> </span>${escapedValue}</div>`;
+                }
             });
-            viewer.innerHTML = html;
+            
+            viewer.innerHTML = `<div class="font-mono text-[11px] leading-tight">${html}</div>`;
         } catch (e) {
             viewer.textContent = currentText;
         }
@@ -656,27 +664,45 @@ class JSONRefactorer {
     }
 
     async exportJSON() {
-        const data = JSON.stringify(this.getCurrentState(), null, 4);
-        const fileName = "VN_Refactored_" + new Date().getTime() + ".json";
+        const currentData = this.getCurrentState();
+        const jsonData = JSON.stringify(currentData, null, 4);
+        const fileName = "VN_Produccion_" + new Date().toISOString().split('T')[0] + ".json";
         
         try {
+            // Intentar guardado directo (File System API)
             if (window.showSaveFilePicker) {
-                const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ accept: { 'application/json': ['.json'] } }] });
+                const handle = await window.showSaveFilePicker({ 
+                    suggestedName: fileName, 
+                    types: [{ description: 'Archivo JSON', accept: { 'application/json': ['.json'] } }] 
+                });
                 const writable = await handle.createWritable();
-                await writable.write(data);
+                await writable.write(jsonData);
                 await writable.close();
-                window.App?.showToast?.("Exportado con éxito", "success");
+                
+                // Actualizar originalJSON al guardar (Consolidar)
+                this.originalJSON = JSON.parse(JSON.stringify(currentData));
+                this.updateUI();
+                
+                window.App?.showToast?.("Archivo JSON guardado y consolidado correctamente", "success");
                 return;
             }
-        } catch(e) {}
+        } catch(e) {
+            if (e.name === 'AbortError') return;
+            console.warn("No se pudo usar FileSystem API:", e);
+        }
 
-        const blob = new Blob([data], { type: 'application/json' });
+        // Fallback: Descarga tradicional
+        const blob = new Blob([jsonData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = fileName;
+        document.body.appendChild(a);
         a.click();
-        window.App?.showToast?.("Descargado en carpeta Descargas", "success");
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        window.App?.showToast?.("JSON generado en tu carpeta de Descargas", "success");
     }
 
     async syncSupabase() {
