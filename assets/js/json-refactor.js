@@ -841,8 +841,6 @@ REGLA ESTRICTA: Responde ÚNICAMENTE con el dato modificado. Si no logras aplica
         });
 
         globalPrompt.value = '';
-    },e texto o confirmando).`);
-        globalPrompt.value = '';
     }
 
     async executePendingAction() {
