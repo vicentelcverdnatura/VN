@@ -470,24 +470,39 @@ class JSONRefactorer {
     }
 
     async callAI(context, instruction, isGlobal = false) {
-        // Fallback to simulated if window.ai is missing
-        if (typeof window.ai === 'undefined' || !window.ai.languageModel) {
-            if (isGlobal) throw new Error("IA Global requiere window.ai (Gemini Nano) habilitado en Chrome Dev.");
+        // Safe detection of the AI engine (names vary between Chrome versions)
+        const aiEngine = window.ai?.languageModel || window.ai?.assistant;
+
+        if (!aiEngine) {
+            if (isGlobal) {
+                console.warn("IA Local no detectada. Usando fallback de simulación básica para Global.");
+                return context; // For global, we strictly return context if no real AI
+            }
             return this.simulateInterpretation(context, instruction);
         }
 
-        const session = await window.ai.languageModel.create();
-        const prompt = isGlobal 
-            ? `Transforma este JSON según la regla: "${instruction}". Devuelve SOLO el JSON resultante.\nJSON:\n${JSON.stringify(context)}`
-            : `Modifica el valor "${context}" con la regla: "${instruction}". Responde SOLO el valor modificado.`;
-        
-        const response = await session.prompt(prompt);
-        let cleaned = response.trim().replace(/^```json/, "").replace(/```$/, "").trim();
-        
         try {
-            return isGlobal ? JSON.parse(cleaned) : cleaned;
-        } catch (e) {
-            return cleaned;
+            const capabilities = await aiEngine.capabilities();
+            if (capabilities.available === 'no') {
+                throw new Error("Modelo no descargado o no disponible.");
+            }
+
+            const session = await aiEngine.create();
+            const prompt = isGlobal 
+                ? `Transforma este JSON según la regla: "${instruction}". Devuelve SOLO el JSON resultante.\nJSON:\n${JSON.stringify(context)}`
+                : `Modifica el valor "${context}" con la regla: "${instruction}". Responde SOLO el valor modificado.`;
+            
+            const response = await session.prompt(prompt);
+            let cleaned = response.trim().replace(/^```json/, "").replace(/```$/, "").trim();
+            
+            try {
+                return isGlobal ? JSON.parse(cleaned) : cleaned;
+            } catch (e) {
+                return cleaned;
+            }
+        } catch (err) {
+            console.error("AI Model Error:", err);
+            return isGlobal ? context : this.simulateInterpretation(context, instruction);
         }
     }
 
