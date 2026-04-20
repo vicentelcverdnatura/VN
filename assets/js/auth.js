@@ -26,14 +26,45 @@ const Auth = {
         }
     },
 
-    attemptLogin(username, password) {
+    async attemptLogin(username, password) {
         const errorEl = document.getElementById('login-error');
-
         const lowerUser = username.toLowerCase();
-        const isAdminValid = lowerUser === 'admin' && password === '12345';
-        const isVicenteValid = lowerUser === 'vicentelc' && (password === 'admin' || password === '12345');
+        
+        let isValid = false;
 
-        if (isAdminValid || isVicenteValid) {
+        // Validacion externa via archivo TOML (users.toml)
+        try {
+            const response = await fetch('./users.toml');
+            if (response.ok) {
+                const tomlText = await response.text();
+                const lines = tomlText.split('\n');
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    if (line.startsWith('#') || line.startsWith('[')) continue;
+                    
+                    const parts = line.split('=');
+                    if (parts.length >= 2) {
+                        const userKey = parts[0].trim().toLowerCase();
+                        // Remover comillas y espacios
+                        const passValRaw = parts.slice(1).join('=').trim().replace(/^["']|["']$/g, '');
+                        // Soporte para contraseñas múltiples separadas por comas (ej. vicentelc)
+                        const validPasswords = passValRaw.split(',').map(p => p.trim());
+                        
+                        if (userKey === lowerUser && validPasswords.includes(password)) {
+                            isValid = true;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                console.error("Fallo al cargar la base de credenciales locales (users.toml).");
+            }
+        } catch (e) {
+            console.error("No se pudo acceder a users.toml", e);
+        }
+
+        if (isValid) {
             errorEl.classList.add('hidden');
             this.loginSuccess(lowerUser);
         } else {
