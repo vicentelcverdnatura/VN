@@ -457,16 +457,69 @@ class JSONRefactorer {
         this.saveState(data);
     }
 
-    simulateInterpretation(val, inst) {
-        const low = inst.toLowerCase();
-        if (low.includes('mayusc') || low.includes('upper')) return typeof val === 'string' ? val.toUpperCase() : val;
-        if (low.includes('minusc') || low.includes('lower')) return typeof val === 'string' ? val.toLowerCase() : val;
-        if (low.includes('limpiar') || low.includes('clean')) return typeof val === 'string' ? val.trim() : val;
-        if (low.includes('sumar') || low.includes('add')) {
-            const num = parseFloat(inst.match(/\d+/)?.[0] || 0);
-            return typeof val === 'number' ? val + num : val;
+    simulateInterpretation(currentValue, instruction) {
+        if (!instruction || currentValue === undefined) return currentValue;
+        
+        const isNumeric = typeof currentValue === 'number';
+        const isString = typeof currentValue === 'string';
+        let res = currentValue;
+        
+        const lowerInst = instruction.toLowerCase();
+        
+        // 1. Sustitución específica: "Sustituye 'rojo' por 'verde'"
+        const replaceMatch = instruction.match(/(?:sustitu[iy]e[r]?|cambi[aeo][r]?|reemplaz[aeo][r]?)\s+(?:la\s+|el\s+)?["']?(.*?)["']?\s+por\s+["']?(.*?)["']?/i);
+        
+        // 2. Establecer valor fijo: "Pon 'Hola'" o "Escribe 123"
+        const fullSubstituteMatch = instruction.match(/^(?:pon(?:er)?|escribe(?:r)?|sustitu[iy]e(?:r)?|cambia(?:r)?|reemplaza(?:r)?|modifica(?:r)?)(?:\s+(?:todo\s+)?(?:por|a|como))?\s+["']?(.*?)["']?$/i);
+        
+        // 3. Operaciones matemáticas: "+ 50", "* 1.10", "Añade 5"
+        const mathMatch = instruction.match(/(?:calcula(?:r)?|suma(?:r)?|multiplica(?:r)?|divide|resta(?:r)?|anade)?\s*([\+\-\*\/])\s*([\d\.,]+)/i);
+
+        if (mathMatch && isNumeric) {
+            const op = mathMatch[1];
+            const num = parseFloat(mathMatch[2].replace(',', '.'));
+            if (op === '+') res = currentValue + num;
+            if (op === '-') res = currentValue - num;
+            if (op === '*') res = currentValue * num;
+            if (op === '/') res = currentValue / num;
         }
-        return val; // fallback same
+        else if (replaceMatch && isString) {
+            const toFind = replaceMatch[1];
+            const toReplace = replaceMatch[2];
+            res = currentValue.replace(new RegExp(this.escapeRegExp(toFind), 'g'), toReplace);
+        }
+        else if (fullSubstituteMatch) {
+            let newVal = fullSubstituteMatch[1];
+            // Intentar preservar tipo si es número
+            if (!isNaN(newVal) && newVal.trim() !== "") res = parseFloat(newVal);
+            else res = newVal;
+        }
+        else if (lowerInst.includes("extraer") && (lowerInst.includes("número") || lowerInst.includes("numero")) && isString) {
+            res = currentValue.replace(/[^0-9]/g, '');
+        }
+        else if ((lowerInst.includes("mayúscula") || lowerInst.includes("upper")) && isString) {
+            res = currentValue.toUpperCase();
+        }
+        else if ((lowerInst.includes("minúscula") || lowerInst.includes("lower")) && isString) {
+            res = currentValue.toLowerCase();
+        }
+        else if (lowerInst.includes("limpiar") || lowerInst.includes("trim")) {
+            res = isString ? currentValue.trim() : currentValue;
+        }
+        else if (lowerInst.includes("iva") && isNumeric) {
+            res = Number(parseFloat((currentValue * 1.21).toFixed(2)));
+        }
+        else if (lowerInst.includes("traducir") || lowerInst.includes("inglés") || lowerInst.includes("english")) {
+            // Simulación de traducción para los ejemplos comunes
+            const mocks = { "nombre": "name", "apellido": "surname", "edad": "age", "ciudad": "city" };
+            res = mocks[currentValue.toString().toLowerCase()] || currentValue;
+        }
+
+        return res;
+    }
+
+    escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     async callAI(context, instruction, isGlobal = false) {
