@@ -219,101 +219,84 @@ const GeminiService = {
      */
     async transformJSON(jsonData, instruction, isGlobal = false) {
         const jsonStr = JSON.stringify(jsonData, null, 2);
-        const truncated = jsonStr.length > 15000 ? jsonStr.substring(0, 15000) + '\n... [truncado]' : jsonStr;
+        // Ampliamos significativamente el limite, Gemini Flash soporta un mega-contexto nativo
+        const truncated = jsonStr.length > 500000 ? jsonStr.substring(0, 500000) + '\n... [truncado por exceso de memoria]' : jsonStr;
 
-        const prompt = `Eres un asistente experto en transformación de datos JSON. 
-Tu tarea es aplicar la siguiente instrucción del usuario al JSON proporcionado y devolver ÚNICAMENTE el JSON resultante, sin explicaciones ni formato markdown.
+        const prompt = `Eres un asistente experto en programación y estructuras de datos JSON. 
+Tu única tarea es aplicar la siguiente instrucción al JSON proporcionado y devolver ÚNICAMENTE el JSON resultante, sin explicaciones, de forma que sea 100% válido sintácticamente.
 
 ## REGLAS ESTRICTAS:
-1. Devuelve SOLO el JSON puro, sin bloques de código (\`\`\`), sin texto adicional.
-2. Mantén la estructura original del JSON intacta excepto donde la instrucción requiera cambios.
-3. Si la instrucción no aplica a algún campo, déjalo sin cambios.
-4. Respeta los tipos de datos (números como números, strings como strings).
-5. Si hay un array de objetos, aplica la transformación a TODOS los elementos que correspondan.
+1. Devuelve SOLO texto en formato JSON válido, sin bloques de código markdown (\`\`\`), y sin ningún comentario inicial o final.
+2. Mantén la estructura original y claves intactas excepto donde la instrucción te pida modificarlas.
+3. Si es un array o lista, asegúrate de aplicar el cambio masivamente a todos los elementos que cumplan la condición.
+4. Mantén los tipos de datos correctos (números no deben ir en comillas si originalmente no estaban, los booleanos son true/false, etc).
 
 ## INSTRUCCIÓN DEL USUARIO:
 "${instruction}"
 
 ## MODO:
-${isGlobal ? 'GLOBAL — Aplica a todo el documento completo.' : 'NODO ESPECÍFICO — Aplica solo al valor proporcionado.'}
+${isGlobal ? 'MODO GLOBAL — Debes iterar y aplicar a todo el documento.' : 'MODO LOCAL — Aplica solo al nodo específico que se muesta.'}
 
 ## JSON A TRANSFORMAR:
 ${truncated}
 
-Responde ÚNICAMENTE con el JSON resultante:`;
+Responde ÚNICAMENTE con el objeto JSON resultante:`;
 
-        const rawResponse = await this.generate(prompt, { temperature: 0.1 });
+        const rawResponse = await this.generate(prompt, { temperature: 0.1, maxOutputTokens: 8192 });
 
-        // Limpiar la respuesta: a veces Gemini la envuelve en bloques de código
         let cleaned = rawResponse.trim();
-        
-        // Remover bloques de código markdown si existen
-        if (cleaned.startsWith('```json')) {
-            cleaned = cleaned.slice(7);
-        } else if (cleaned.startsWith('```')) {
-            cleaned = cleaned.slice(3);
-        }
-        if (cleaned.endsWith('```')) {
-            cleaned = cleaned.slice(0, -3);
-        }
+        if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
+        else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
+        if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
         cleaned = cleaned.trim();
 
         try {
             return JSON.parse(cleaned);
         } catch (parseErr) {
-            // Segundo intento: pedir a Gemini que corrija
-            throw new Error(`Gemini devolvió un JSON inválido. Intenta reformular la instrucción.\n\nRespuesta parcial: ${cleaned.substring(0, 200)}...`);
+            throw new Error(`Gemini devolvió un JSON inválido sintácticamente. Intenta reformular la instrucción de forma más sencilla.\n\nRespuesta parcial: ${cleaned.substring(0, 200)}...`);
         }
     },
 
     /**
-     * Genera una respuesta de chat contextualizada para RRHH/Salarial.
+     * Genera una respuesta de chat analítico para Inteligencia de Costes RRHH (S.A.L.I.X).
      */
     async chatHR(query, employeeData) {
-        // Preparar resumen estadístico de los datos
-        let contextSummary = 'No hay datos cargados.';
+        // En lugar de resumir, aprovechamos el contexto extenso de Gemini y le pasamos los datos puros.
+        // Se limpian solo cosas superfluas como UUIDs para ahorrar tokens.
+        let rawData = '[]';
         if (employeeData && employeeData.length > 0) {
-            const totalEmps = employeeData.length;
-            const depts = [...new Set(employeeData.map(d => d['Depart.'] || 'Desconocido'))];
-            const sampleFields = Object.keys(employeeData[0]).filter(k => k !== 'uuid' && k !== 'foto').slice(0, 10);
-            
-            // Calcular algunos agregados
-            const numericFields = ['GRUPO', 'COMPLEMENTO', 'FRIO', 'Variable', 'Categoria a APLICAR'];
-            const totals = {};
-            numericFields.forEach(f => {
-                const sum = employeeData.reduce((acc, e) => acc + (parseFloat(e[f]) || 0), 0);
-                if (sum > 0) totals[f] = sum;
+            const cleanArray = employeeData.map(d => {
+                const copy = {...d};
+                delete copy.uuid;
+                delete copy.foto;
+                return copy;
             });
-
-            contextSummary = `
-Base de datos: ${totalEmps} empleados.
-Departamentos: ${depts.join(', ')}.
-Campos disponibles: ${sampleFields.join(', ')}.
-Totales calculados: ${JSON.stringify(totals)}.
-Muestra (3 primeros registros): ${JSON.stringify(employeeData.slice(0, 3), null, 1)}`;
+            rawData = JSON.stringify(cleanArray);
         }
 
-        const prompt = `Eres "S.A.L.I.X.", un agente analítico de gestión salarial y RRHH para la empresa Verdnatura.
-Tu rol es responder preguntas sobre datos de empleados, analizar costes salariales, y simular el impacto de incrementos.
+        const prompt = `Eres "S.A.L.I.X.", el Analista IA de Gestión Salarial y Recursos Humanos de la empresa Verdnatura.
+Analizas los datos vivos de la nómina y respondes dudas sobre cálculos o simulaciones de impactos económicos.
 
-## CONTEXTO DE DATOS ACTUALES:
-${contextSummary}
+## DATOS EN TIEMPO REAL (JSON EXPORTADO DEL CSV DE TRABAJADORES):
+${rawData}
 
-## REGLAS:
-1. Responde en español, de forma concisa y profesional.
-2. Usa datos reales de la base cuando sea posible.
-3. Para cálculos, muestra siempre: el campo modificado, cuántos empleados afecta, coste actual vs proyectado, y el impacto económico.
-4. Formatea las cantidades en euros con formato español (ej: 1.234,56 €).
-5. Si no tienes datos suficientes, dilo claramente.
-6. Puedes usar HTML básico para dar formato: <b>, <br>, <span class="text-lime-400">, etc.
-7. NO uses bloques de código markdown.
+## REGLAS ESTRICTAS PARA TUS RESPUESTAS:
+1. Eres un experto contable de RRHH. Respondes SIEMPRE en español, con un tono analítico, directo y profesional.
+2. Posees la base de datos completa arriba. Debes iterar exactamente sobre las filas del JSON para dar datos reales (quién está en cada departamento, cuál es la suma de los valores, etc).
+3. Si se te pide calcular una simulación ("Baja un 10% el FRÍO al grupo COMPRAS"), haz la matemática mentalmente sobre cada trabajador afectado y expón el resultado.
+4. Muestra SIEMPRE en estos casos:
+   - A cuántas personas afecta.
+   - Coste de ese concepto actual frente al Coste proyectado (Sumatorio).
+   - Impacto económico (Diferencia total mensual).
+5. Usa formato de moneda española (€) y utiliza negritas para nombres y totales clave.
+6. Devuelve formato simple legible en HTML (puedes usar <b>, <br>, <span class="text-lime-400 font-bold"> para pintar verde datos positivos, <span class="text-red-400 font-bold"> para rojos/costes). Sin formato markdown de bloques (\`\`\`).
 
-## PREGUNTA DEL USUARIO:
+## PREGUNTA O INSTRUCCIÓN DEL SUPERVISOR:
 "${query}"
 
-Responde directamente:`;
+Redacta tu análisis:`;
 
-        return await this.generate(prompt, { temperature: 0.4, maxOutputTokens: 2048 });
+        return await this.generate(prompt, { temperature: 0.2, maxOutputTokens: 2048 });
     }
 };
 
