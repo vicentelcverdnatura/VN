@@ -364,13 +364,13 @@ class JSONRefactorer {
             return;
         }
 
-        if (typeof JsDiff === 'undefined') {
-            viewer.innerHTML = `<div class="text-orange-400 p-2">JsDiff no detectado. Mostrando JSON actual:</div><pre class="p-2">${currentText.replace(/</g, "&lt;")}</pre>`;
+        if (typeof Diff === 'undefined') {
+            viewer.innerHTML = `<div class="text-orange-400 p-2">Librería Diff no detectada. Mostrando JSON actual:</div><pre class="flex-1 w-full p-2">${currentText.replace(/</g, "&lt;")}</pre>`;
             return;
         }
 
         try {
-            const diff = JsDiff.diffJson(this.originalJSON, currentData);
+            const diff = Diff.diffJson(this.originalJSON, currentData);
             let html = '<div class="bg-zinc-950/50 p-2 border-b border-zinc-800 mb-2 text-[10px] uppercase font-bold text-zinc-500 tracking-widest flex items-center justify-between"><span>Comparativa de Cambios (Unified Diff)</span><span class="text-lime-500">Documento en Memoria</span></div>';
             
             diff.forEach(part => {
