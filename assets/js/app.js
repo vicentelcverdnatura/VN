@@ -96,6 +96,7 @@ const App = {
                 if (targetViewId === 'view-ai') titleH.textContent = "Agente S.A.L.I.X.";
                 if (targetViewId === 'view-json-refactor') titleH.textContent = "Refactorizador de JSON (AI)";
                 if (targetViewId === 'view-history') titleH.textContent = "Control Interno";
+                if (targetViewId === 'view-home') titleH.textContent = "Centro de Operaciones";
             });
         });
     },
