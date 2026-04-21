@@ -417,13 +417,13 @@ class JSONRefactorer {
                 return;
             }
 
-            this.addConsoleChat('🤖 Asistente IA', `He entendido la instrucción. Propongo cambiar <b>${key}</b> de <span class="text-red-400">${JSON.stringify(originalValue)}</span> a <span class="text-lime-400">${JSON.stringify(previewResult)}</span>. Confirma para aplicar.`);
+            this.addConsoleChat('🤖 Asistente IA / VINUX', `He aplicado directamente la mutación: cambié <b>${key}</b> de <span class="text-red-400">${JSON.stringify(originalValue)}</span> a <span class="text-lime-400">${JSON.stringify(previewResult)}</span>.`);
+            if (window.App && window.App.addSystemLog) {
+                window.App.addSystemLog("Refactorización JSON", `Cambio local en clave "${key}" aplicado.`);
+            }
 
-            this.showPreviewPopover(anchorEl, key, originalValue, previewResult, () => {
-                this.updateNodeValue(path, previewResult);
-                this.addConsoleChat('🤖 Asistente IA', `✅ Cambio aplicado en <b>${key}</b>.`);
-                window.App?.showToast?.("Cambio aplicado con éxito", "success");
-            });
+            this.updateNodeValue(path, previewResult);
+            window.App?.showToast?.("Cambio aplicado con éxito", "success");
 
         } catch (err) {
             overlay?.classList.remove('flex');
@@ -460,13 +460,14 @@ class JSONRefactorer {
             overlay?.classList.remove('flex');
             overlay?.classList.add('hidden');
 
-            this.addConsoleChat('🤖 Asistente IA', `Transformación calculada. Revisa el resultado antes de confirmar.`);
+            this.addConsoleChat('🤖 Asistente IA / VINUX', `✅ Transformación global aplicada automáticamente al documento. Observa la comparativa en el Visor JSON.`);
+            
+            if (window.App && window.App.addSystemLog) {
+                window.App.addSystemLog("Mutación JSON Global", `Instrucción: ${instruction}`);
+            }
 
-            this.showPreviewPopover(null, 'GLOBAL', 'Documento Completo', `Instrucción ejecutada: "${instruction}"`, () => {
-                this.saveState(result);
-                this.addConsoleChat('🤖 Asistente IA', '✅ Transformación global aplicada al documento.');
-                if (input) input.value = '';
-            });
+            this.saveState(result);
+            if (input) input.value = '';
         } catch (err) {
             overlay?.classList.remove('flex');
             overlay?.classList.add('hidden');

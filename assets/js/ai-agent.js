@@ -80,6 +80,72 @@ const AIAgent = {
         
         const q = query.toLowerCase();
 
+        // Registrar la consuta en el log principal de la App.
+        if (window.App && window.App.addSystemLog) {
+            window.App.addSystemLog("Consulta Financiera S.A.L.I.X", query);
+        }
+
+        // --- LÓGICA ESPECIAL PARA CAMBIO DE CATEGORÍAS ---
+        // Ej: "cambiar de categoría I a la categoría G"
+        const catChangeMatch = q.match(/cambiar?\s+(?:a\s+los\s+trabajadores\s+)?(?:de\s+(?:la\s+)?categor[ií]a\s+)?([a-z0-9]+)\s+a\s+(?:la\s+)?categor[ií]a\s+([a-z0-9]+)/i) || q.match(/cambiar?\s+(?:de\s+(?:la\s+)?categor[ií]a\s+)?([a-z0-9]+)\s+a\s+(?:la\s+)?categor[ií]a\s+([a-z0-9]+)\s+(?:a\s+los\s+trabajadores)/i);
+        
+        if (catChangeMatch) {
+            const currentCat = catChangeMatch[1].toUpperCase();
+            const targetCat = catChangeMatch[2].toUpperCase();
+
+            const oldGroup = data.filter(d => (d['CATEGORIA'] || d['Cat. prof.'] || '').toUpperCase() === currentCat);
+            const targetGroup = data.filter(d => (d['CATEGORIA'] || d['Cat. prof.'] || '').toUpperCase() === targetCat);
+
+            if (oldGroup.length === 0) return `No hay trabajadores actualmente en la Categoría <b>${currentCat}</b>.`;
+
+            let targetSalary = 0;
+            if (targetGroup.length > 0) {
+                // Sacar salario medio base de la categoría destino
+                let sumTarget = 0;
+                targetGroup.forEach(e => sumTarget += (parseFloat(e['Categoria a APLICAR']) || 0));
+                targetSalary = sumTarget / targetGroup.length;
+            } else {
+                return `La Categoría de destino <b>${targetCat}</b> no existe en la empresa o nadie la tiene asignada, por lo que no es posible estimar su salario base de salto directo.`;
+            }
+
+            let currentCost = 0;
+            let projectedCost = 0;
+
+            oldGroup.forEach(emp => {
+                let actual = parseFloat(emp['Categoria a APLICAR']) || 0;
+                currentCost += actual;
+                // Proyección: Asumen el sueldo base de su nueva categoría
+                projectedCost += targetSalary;
+            });
+
+            const diffImpact = projectedCost - currentCost;
+
+            return `
+                <div class="space-y-3">
+                    <p class="font-semibold text-lime-400">Proyección Salarial: Salto de Categoría</p>
+                    <div class="p-3 bg-zinc-950 border border-zinc-800 rounded-xl space-y-1 mt-2">
+                        <p class="text-xs text-zinc-400">Parámetros de reestructuración masiva:</p>
+                        <p>Trabajadores promocionados: <b>${oldGroup.length} empleados</b> de Cat. <b>${currentCat}</b></p>
+                        <p>Sueldo Base Cat. Destino (<b>${targetCat}</b>): <b>${this.formatCurrency(targetSalary)} media</b></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-center mt-3">
+                        <div class="bg-zinc-900 border border-zinc-700/50 rounded-lg p-2">
+                            <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold block mb-1">Coste Actual (${currentCat})</span>
+                            <span>${this.formatCurrency(currentCost)}</span>
+                        </div>
+                        <div class="bg-zinc-900 border border-zinc-700/50 rounded-lg p-2">
+                            <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold block mb-1">C. Proyectado (${targetCat})</span>
+                            <span>${this.formatCurrency(projectedCost)}</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between">
+                        <span class="font-bold">Impacto Bruto Mensual (Solo Base):</span>
+                        <span class="text-red-400 font-bold tracking-tight">${diffImpact > 0 ? '+' : ''}${this.formatCurrency(diffImpact)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
         // 1. Extraer los parámetros matemáticos. (%) o (€)
         const numMatch = q.match(/(\d+(?:\.\d+)?)\s*(%|€)?/);
         let amount = 0;
@@ -126,10 +192,10 @@ const AIAgent = {
                 return `Hay <b>${affected.length} empleados</b> ${targetDept ? 'en ' + targetDept.toUpperCase() : 'en la empresa'}.<br/>El coste salarial base total asociado a esa muestra es de <b>${this.formatCurrency(sumCostes)}</b> netos al mes aproximados.`;
             }
 
-            return `No detecto una orden financiera clara. Para realizar simulaciones, dime qué incrementar: <br><span class="text-lime-300">Ejemplo: "Sube un 5% el campo Frío para el departamento Logística"</span>`;
+            return `No detecto una orden financiera clara. Para realizar simulaciones, dime qué incrementar: <br><span class="text-lime-300">Ejemplo: "Sube un 5% el campo Frío para el departamento Logística"</span> o pruebas de subida sectorial como <span class="text-lime-300">"cambiar de la categoría I a la categoría G a los trabajadores"</span>.`;
         }
 
-        // --- LÓGICA DE SIMULACIÓN FINANCIERA (WHAT-IF) ---
+        // --- LÓGICA DE SIMULACIÓN FINANCIERA CLÁSICA (WHAT-IF) ---
 
         // Filtrar masa salarial
         const targetEmployees = data.filter(d => {
@@ -179,7 +245,7 @@ const AIAgent = {
                 </div>
                 <div class="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between">
                     <span class="font-bold">Impacto a Asumir:</span>
-                    <span class="text-red-400 font-bold tracking-tight">+${this.formatCurrency(diffImpact)}</span>
+                    <span class="text-red-400 font-bold tracking-tight">${diffImpact > 0 ? '+' : ''}${this.formatCurrency(diffImpact)}</span>
                 </div>
             </div>
         `;
