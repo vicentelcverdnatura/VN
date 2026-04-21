@@ -492,30 +492,19 @@ class JSONRefactorer {
     // El motor local de Regex ha sido abstraído al Agente interno VINUX (vinux.js)
 
     /**
-     * Punto de entrada unificado para la IA.
-     * Prioriza Gemini API si está configurada. 
-     * Si no hay API Key o falla la conexión, usa el motor local como fallback.
+     * Punto de entrada unificado para la Inteligencia Heurística.
+     * Utiliza el Agente Interno VINUX para evaluar transformaciones directamente
+     * en el navegador y con conocimiento estructural.
      */
     async callAI(context, instruction, isGlobal = false) {
-        // Intentar usar Gemini si está configurado
-        if (window.GeminiService && window.GeminiService.isConfigured()) {
-            try {
-                this.addConsoleChat('⚡ Motor IA', `Enviando a <b>Gemini 2.0 Flash</b>: "${instruction}"`);
-                const result = await window.GeminiService.transformJSON(context, instruction, isGlobal);
-                this.addConsoleChat('⚡ Motor IA', `<span class="text-lime-400">Respuesta recibida de Gemini correctamente.</span>`);
-                return result;
-            } catch (geminiErr) {
-                this.addConsoleChat('⚠️ Gemini Error', `${geminiErr.message}. <span class="text-zinc-500">Usando motor local como fallback...</span>`);
-                console.warn('Gemini API error, falling back to local engine:', geminiErr);
-            }
-        }
-
-        // Fallback: Motor local basado en reglas avanzadas (VINUX)
-        this.addConsoleChat('🔧 Motor VINUX', `Delegando a Agente Local VINUX (Sin conexión)`);
+        this.addConsoleChat('🧠 Motor VINUX', `Analizando la instrucción estructural...`);
         if (window.VINUX) {
-            return window.VINUX.process(context, instruction);
+            const result = window.VINUX.process(context, instruction);
+            this.addConsoleChat('✅ VINUX', `<span class="text-lime-400">Mutación completada y confirmada localmente.</span>`);
+            return result;
         } else {
             console.error("VINUX agent missing.");
+            this.addConsoleChat('⚠️ Error', `<span class="text-red-400">Agente VINUX inactivo.</span>`);
             return context;
         }
     }

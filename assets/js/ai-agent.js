@@ -130,97 +130,13 @@ const AIAgent = {
         `;
     },
 
-    async processHrIntent(query) {
-        // Usar Gemini si está configurado
-        if (window.GeminiService && window.GeminiService.isConfigured()) {
-            try {
-                const data = window.App ? window.App.data : [];
-                return await window.GeminiService.chatHR(query, data);
-            } catch (err) {
-                console.warn('Gemini chat error, falling back to local HR engine:', err);
-                // Continuar silenciosamente hacia el fallback local si Gemini falla
-            }
+    processHrIntent(query) {
+        if (window.VINUX) {
+            const data = window.App ? window.App.data : [];
+            return window.VINUX.simulateHR(query, data);
+        } else {
+            return "El agente VINUX no está inicializado o hubo un error de carga.";
         }
-        
-        // Fallback local:
-        return this._processHrIntentLocal(query);
-    },
-
-    _processHrIntentLocal(query) {
-        query = query.toLowerCase();
-        const data = window.App ? window.App.data : [];
-        if (data.length === 0) return "La base de datos está vacía. Por favor, sincroniza el archivo CSV primero.";
-
-        // Extraer numero para % o euros fijos
-        const numMatch = query.match(/(\d+(?:\.\d+)?)\s*(%|€)?/);
-        let number = 0;
-        let isPct = false;
-
-        if (numMatch) {
-            number = parseFloat(numMatch[1]);
-            if (query.includes('%')) isPct = true;
-        }
-
-        // Reconocer campo
-        let field = null;
-        if (query.includes('categoria a aplicar') || query.includes('sueldo')) field = 'Categoria a APLICAR';
-        else if (query.includes('complemento')) field = 'COMPLEMENTO';
-        else if (query.includes('grupo')) field = 'GRUPO';
-        else if (query.includes('frio') || query.includes('frío')) field = 'FRIO';
-        else if (query.includes('variable')) field = 'Variable';
-
-        // Reconocer departamento
-        let matchedDept = null;
-        const depts = [...new Set(data.filter(d => d['Depart.']).map(d => String(d['Depart.']).toLowerCase()))];
-        for (let dpt of depts) {
-            if (query.includes(dpt)) {
-                matchedDept = dpt;
-                break;
-            }
-        }
-
-        if (!field || number === 0) {
-            return `No he podido deducir los parámetros exactos. Intenta algo como: <b>"Calcula una subida del 5% del Complemento para Almacenaje."</b>`;
-        }
-
-        // Filtrar targets
-        const targets = data.filter(d => {
-            if (!matchedDept) return true; // Todos
-            return String(d['Depart.']).toLowerCase() === matchedDept;
-        });
-
-        if (targets.length === 0) {
-            return `No encontré ningún empleado en el departamento '${matchedDept}'.`;
-        }
-
-        // Ejecutar simulacion matematica
-        let costoActual = 0;
-        let costoProyectado = 0;
-
-        targets.forEach(t => {
-            let actual = parseFloat(t[field]) || 0;
-            costoActual += actual;
-
-            if (isPct) {
-                costoProyectado += actual + (actual * (number / 100));
-            } else {
-                // Sube directo eu
-                costoProyectado += actual + number;
-            }
-        });
-
-        const diferencia = costoProyectado - costoActual;
-        const formatE = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v);
-
-        return `
-            He analizado el escenario:<br><br>
-            • <b>Afecto:</b> ${targets.length} empleados ${matchedDept ? `en <b>${matchedDept.toUpperCase()}</b>` : 'en total'}.<br>
-            • <b>Campo modificado:</b> ${field}<br>
-            • <b>Incremento paramétrico:</b> ${number}${isPct ? '%' : '€'} por empleado<br><br>
-            <b>Coste Mensual Actual:</b> ${formatE(costoActual)}<br>
-            <b>Coste Proyectado:</b> ${formatE(costoProyectado)}<br><br>
-            <span class="text-lime-400 font-bold">Impacto Económico Directo: +${formatE(diferencia)}</span>
-        `;
     }
 };
 
