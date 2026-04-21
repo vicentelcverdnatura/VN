@@ -1,9 +1,12 @@
-// ai-agent.js - Lógica matemática predictiva para el chatbot
+// ai-agent.js - Agente Asistente Financiero Especializado en HR
+// Funciona 100% sobre la base de datos viva (CSV en memoria). No tiene relación con JSON.
 
 const AIAgent = {
     init() {
         const form = document.getElementById('ai-form');
         const input = document.getElementById('ai-input');
+
+        if (!form || !input) return;
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -13,19 +16,20 @@ const AIAgent = {
             this.addMessage(text, 'user');
             input.value = '';
 
-            // Simular pensando
-            const typingId = this.addMessage('Analizando...', 'ai', true);
+            const typingId = this.addMessage('Analizando proyecciones...', 'ai', true);
 
-            setTimeout(async () => {
+            setTimeout(() => {
                 this.removeMessage(typingId);
-                const response = await this.processIntent(text);
+                const response = this.analyzeHR(text);
                 this.addMessage(response, 'ai');
-            }, 800 + Math.random() * 1000); // 0.8 a 1.8 segs de delay
+            }, 600 + Math.random() * 800);
         });
     },
 
     addMessage(text, sender, isTyping = false) {
         const container = document.getElementById('ai-messages');
+        if (!container) return;
+        
         const msgWrapper = document.createElement('div');
         const id = 'msg-' + Date.now();
         msgWrapper.id = id;
@@ -44,7 +48,7 @@ const AIAgent = {
             msgWrapper.className = 'flex items-start max-w-[80%]';
             msgWrapper.innerHTML = `
                 <div class="w-8 h-8 rounded-full bg-lime-500/10 flex items-center justify-center shrink-0 border border-lime-500/30">
-                    <i data-lucide="bot" class="w-4 h-4 text-lime-400"></i>
+                    <i data-lucide="calculator" class="w-4 h-4 text-lime-400"></i>
                 </div>
                 <div class="ml-4 p-4 rounded-2xl rounded-tl-none bg-zinc-800/80 border border-zinc-700 text-sm text-zinc-200 animate-slide-up ${isTyping ? 'animate-pulse' : ''}">
                     <p>${text}</p>
@@ -64,79 +68,125 @@ const AIAgent = {
         if (el) el.remove();
     },
 
-    async processIntent(query) {
-        const isJsonView = !document.getElementById('json-refactor-view')?.classList.contains('hidden');
-        
-        if (isJsonView) {
-            return await this.processJsonIntent(query);
-        } else {
-            return this.processHrIntent(query);
+    /**
+     * Motor de Análisis Financiero y RRHH
+     * Trabaja directamente sobre los datos CSV cargados en window.App.data
+     */
+    analyzeHR(query) {
+        const data = window.App ? window.App.data : [];
+        if (!data || data.length === 0) {
+            return `No hay registros en la base de datos de <b>Personal</b>. Por favor, <b>Vincula tu archivo CSV</b> primero en el panel superior.`;
         }
-    },
+        
+        const q = query.toLowerCase();
 
-    async processJsonIntent(query) {
-        const jsonRef = window.jsonRefactorer;
-        if (!jsonRef) return "El Refactorizador JSON no está inicializado.";
-        
-        const data = jsonRef.getCurrentState();
-        if (!data || Object.keys(data).length === 0) {
-            return "Por favor, carga un archivo JSON inicial. Analizaré su estructura y las labels detectadas para poder asistirte.";
+        // 1. Extraer los parámetros matemáticos. (%) o (€)
+        const numMatch = q.match(/(\d+(?:\.\d+)?)\s*(%|€)?/);
+        let amount = 0;
+        let isPercentage = false;
+
+        if (numMatch) {
+            amount = parseFloat(numMatch[1].replace(',', '.'));
+            if (q.includes('%')) isPercentage = true;
         }
 
-        const lowerQ = query.toLowerCase();
-        
-        // Fase de Confirmación y Generación de Código
-        if (lowerQ === 'si' || lowerQ === 'sí' || lowerQ === 'aplica' || lowerQ === 'adelante' || lowerQ === 'generar') {
-            if (!this.lastInstruction) {
-                return "¿A qué orden te refieres? Dime primero qué deseas cambiar en el JSON.";
+        // 2. Identificar el área de coste / Campo financiero
+        let targetField = null;
+        if (q.includes('categor') || q.includes('sueldo')) targetField = 'Categoria a APLICAR';
+        else if (q.includes('complemento')) targetField = 'COMPLEMENTO';
+        else if (q.includes('grupo')) targetField = 'GRUPO';
+        else if (q.includes('frio') || q.includes('frío')) targetField = 'FRIO';
+        else if (q.includes('variable')) targetField = 'Variable';
+
+        // 3. Evaluar Departamento de destino
+        let targetDept = null;
+        const allDepts = [...new Set(data.filter(d => d['Depart.']).map(d => String(d['Depart.']).toLowerCase()))];
+        for (let dept of allDepts) {
+            if (q.includes(dept)) {
+                targetDept = dept;
+                break;
             }
-            
-            // Re-ejecutar transformaciones globalmente en memoria (sin afectar el view de la app principal obligatoriamente, solo generamos código)
-            // Utilizando el iterador base del objeto
-            let resultData;
-            try {
-                resultData = await jsonRef.transformNode(data, this.lastInstruction, {});
-            } catch(e) {
-                resultData = data; 
+        }
+
+        // --- LÓGICA DE RESPUESTA A PREGUNTAS GENERALES ---
+        if (!targetField && amount === 0) {
+            // Preguntas como "¿Cuántos empleados hay?" o "¿Cuánto gastamos en el departamento de almacenaje?"
+            if (q.includes('cuanto') || q.includes('cuánt') || q.includes('gasto') || q.includes('total')) {
+                const affected = data.filter(d => !targetDept || String(d['Depart.']).toLowerCase() === targetDept);
+                if (affected.length === 0) return `No he encontrado datos del departamento <b>${targetDept}</b>.`;
+                
+                let sumCostes = 0;
+                affected.forEach(emp => {
+                    sumCostes += (parseFloat(emp['Categoria a APLICAR']) || 0);
+                    sumCostes += (parseFloat(emp['COMPLEMENTO']) || 0);
+                    sumCostes += (parseFloat(emp['GRUPO']) || 0);
+                    sumCostes += (parseFloat(emp['FRIO']) || 0);
+                    sumCostes += (parseFloat(emp['Variable']) || 0);
+                });
+                return `Hay <b>${affected.length} empleados</b> ${targetDept ? 'en ' + targetDept.toUpperCase() : 'en la empresa'}.<br/>El coste salarial base total asociado a esa muestra es de <b>${this.formatCurrency(sumCostes)}</b> netos al mes aproximados.`;
             }
-            
-            const rawCode = JSON.stringify(resultData, null, 2);
-            const escapedCode = rawCode.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            
-            this.lastInstruction = null; // reset
-            return `¡Orden procesada! He respetado la sintaxis original y generado los cambios masivos a partir de tu instrucción.<br><br>Aquí tienes el código JSON perfecto para copiar y pegar:<br><br>
-                <div class="relative mt-2">
-                    <pre class="bg-[#09090b] border border-zinc-700/50 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs text-lime-300 font-mono scrollbar-hide max-h-64"><code>${escapedCode}</code></pre>
-                </div>`;
+
+            return `No detecto una orden financiera clara. Para realizar simulaciones, dime qué incrementar: <br><span class="text-lime-300">Ejemplo: "Sube un 5% el campo Frío para el departamento Logística"</span>`;
         }
-        
-        // Fase Analítica e Identificación 
-        this.lastInstruction = query;
-        let keys = [];
-        if (Array.isArray(data) && data.length > 0) {
-            keys = Object.keys(data[0]);
-        } else if (typeof data === 'object') {
-            keys = Object.keys(data);
+
+        // --- LÓGICA DE SIMULACIÓN FINANCIERA (WHAT-IF) ---
+
+        // Filtrar masa salarial
+        const targetEmployees = data.filter(d => {
+            if (!targetDept) return true; // Aplica a toda la empresa
+            return String(d['Depart.']).toLowerCase() === targetDept;
+        });
+
+        if (targetEmployees.length === 0) {
+            return `He analizado la plantilla pero no encuentro a nadie en el departamento especificado.`;
         }
-        
-        let sample = keys.slice(0, 5).join(', ');
-        if(keys.length > 5) sample += '...';
-        
+
+        // Ejecutar algoritmo de impacto de costes
+        let currentCost = 0;
+        let projectedCost = 0;
+
+        targetEmployees.forEach(emp => {
+            let val = parseFloat(emp[targetField]) || 0;
+            currentCost += val;
+
+            if (isPercentage) {
+                projectedCost += val + (val * (amount / 100));
+            } else {
+                projectedCost += val + amount;
+            }
+        });
+
+        const diffImpact = projectedCost - currentCost;
+
         return `
-            He analizado la estructura de tu JSON.<br><br>
-            <b>Labels detectadas:</b><br><span class="text-zinc-400 font-mono text-xs">${sample || 'Ninguna reconocible'}</span><br><br>
-            Entiendo tu orden:<br><span class="text-lime-300 italic">"${query}"</span><br><br>
-            ¿Deseas que aplique estos cambios masivos y genere el código JSON resultante perfecto para copiar y pegar? Responde <b>"Sí"</b>.
+            <div class="space-y-3">
+                <p class="font-semibold text-lime-400">Proyección Salarial Completada</p>
+                <div class="p-3 bg-zinc-950 border border-zinc-800 rounded-xl space-y-1 mt-2">
+                    <p class="text-xs text-zinc-400">Parámetros detectados:</p>
+                    <p>Masa salarial: <b>${targetEmployees.length} empleados</b> ${targetDept ? `(${targetDept.toUpperCase()})` : '(Global)'}</p>
+                    <p>Concepto Nominal: <b>${targetField}</b></p>
+                    <p>Fluctuación: <b>+${amount}${isPercentage ? '%' : '€'} p.p.</b></p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-center mt-3">
+                    <div class="bg-zinc-900 border border-zinc-700/50 rounded-lg p-2">
+                        <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold block mb-1">Coste Actual</span>
+                        <span>${this.formatCurrency(currentCost)}</span>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-700/50 rounded-lg p-2">
+                        <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold block mb-1">Coste Proyectado</span>
+                        <span>${this.formatCurrency(projectedCost)}</span>
+                    </div>
+                </div>
+                <div class="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between">
+                    <span class="font-bold">Impacto a Asumir:</span>
+                    <span class="text-red-400 font-bold tracking-tight">+${this.formatCurrency(diffImpact)}</span>
+                </div>
+            </div>
         `;
     },
 
-    processHrIntent(query) {
-        if (window.VINUX) {
-            const data = window.App ? window.App.data : [];
-            return window.VINUX.simulateHR(query, data);
-        } else {
-            return "El agente VINUX no está inicializado o hubo un error de carga.";
-        }
+    formatCurrency(value) {
+        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
     }
 };
 
