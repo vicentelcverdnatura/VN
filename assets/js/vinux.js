@@ -163,7 +163,17 @@ class VINUXAgent {
 
     _mutateValue(currentValue, inst, intent) {
         const isStr = typeof currentValue === 'string';
-        const isNum = typeof currentValue === 'number';
+        let isNum = typeof currentValue === 'number';
+        let parsedNum = currentValue;
+
+        if (isStr) {
+            const temp = parseFloat(currentValue);
+            // Validamos que realmente tenga contenido numérico extraíble completo
+            if (!isNaN(temp) && isFinite(currentValue)) {
+                parsedNum = temp;
+                isNum = true;
+            }
+        }
 
         if (intent.isReplace && isStr) {
             const rxReplace = /(?:sustituye|cambia|reemplaza)\s+(?:el\s+|la\s+|todo\s+)?["'«]?(.+?)["'»]?\s+(?:por|a|con)\s+["'«]?([^"'»]*)["'»]?/i;
@@ -173,29 +183,38 @@ class VINUXAgent {
                 const rep = m[2];
                 // Caso "sustituye XX por YY". Evalúa globalmente
                 if (currentValue.toLowerCase().includes(m[1].toLowerCase())) {
-                    return currentValue.replace(new RegExp(find, 'gi'), rep);
+                    return currentValue.toString().replace(new RegExp(find, 'gi'), rep);
                 }
             }
         }
 
-        if (intent.isMath && isNum) {
+        if ((intent.isMath || inst.match(/(?:suma|resta|multiplica|divide|dividir)/i)) && isNum) {
             // "%"
             const pctUpMatch = inst.match(/(?:increment(?:a|ar)|sub(?:e|ir)|aument(?:a|ar))[^0-9]+(\d+[\.,]?\d*)\s*%/);
-            if (pctUpMatch) return Number((currentValue * (1 + parseFloat(pctUpMatch[1].replace(',', '.')) / 100)).toFixed(4));
+            if (pctUpMatch) return Number((parsedNum * (1 + parseFloat(pctUpMatch[1].replace(',', '.')) / 100)).toFixed(4));
             
             const pctDownMatch = inst.match(/(?:reduc(?:e|ir)|baj(?:a|ar)|desconta(?:r))[^0-9]+(\d+[\.,]?\d*)\s*%/);
-            if (pctDownMatch) return Number((currentValue * (1 - parseFloat(pctDownMatch[1].replace(',', '.')) / 100)).toFixed(4));
+            if (pctDownMatch) return Number((parsedNum * (1 - parseFloat(pctDownMatch[1].replace(',', '.')) / 100)).toFixed(4));
             
             // Operaciones absolutas
-            const addMatch = inst.match(/(?:suma(?:r|le)?)\s+([\d\.,]+)/);
-            if (addMatch) return Number((currentValue + parseFloat(addMatch[1].replace(',', '.'))).toFixed(4));
+            const addMatch = inst.match(/(?:suma(?:r|le)?)\s+([\d\.,]+)/i);
+            if (addMatch) return Number((parsedNum + parseFloat(addMatch[1].replace(',', '.'))).toFixed(4));
             
-            const mulMatch = inst.match(/(?:multiplica(?:r)?)\s+(?:por\s+)?([\d\.,]+)/);
-            if (mulMatch) return Number((currentValue * parseFloat(mulMatch[1].replace(',', '.'))).toFixed(4));
+            const subMatch = inst.match(/(?:resta(?:r|le)?)\s+([\d\.,]+)/i);
+            if (subMatch) return Number((parsedNum - parseFloat(subMatch[1].replace(',', '.'))).toFixed(4));
+
+            const mulMatch = inst.match(/(?:multiplica(?:r)?)\s+(?:al\s+n[úu]mero\s+)?(?:por\s+)?([\d\.,]+)/i);
+            if (mulMatch) return Number((parsedNum * parseFloat(mulMatch[1].replace(',', '.'))).toFixed(4));
+
+            const divMatch = inst.match(/(?:divide|dividir)(?:\s+(?:el\s+)?n[uú]mero)?\s+(?:por|entre)\s+([\d\.,]+)/i);
+            if (divMatch) {
+                const divisor = parseFloat(divMatch[1].replace(',', '.'));
+                if (divisor !== 0) return Number((parsedNum / divisor).toFixed(4));
+            }
         }
 
         // 4. TRANSFORMACIONES DE TEXTO BÁSICAS
-        if (isStr) {
+        if (isStr && !isNum) {
             if (inst.includes('mayúscula') || inst.includes('uppercase')) return currentValue.toUpperCase();
             if (inst.includes('minúscula') || inst.includes('lowercase')) return currentValue.toLowerCase();
             if (inst.includes('capitaliz')) return currentValue.replace(/\b\w/g, c => c.toUpperCase());
