@@ -130,7 +130,23 @@ const AIAgent = {
         `;
     },
 
-    processHrIntent(query) {
+    async processHrIntent(query) {
+        // Usar Gemini si está configurado
+        if (window.GeminiService && window.GeminiService.isConfigured()) {
+            try {
+                const data = window.App ? window.App.data : [];
+                return await window.GeminiService.chatHR(query, data);
+            } catch (err) {
+                console.warn('Gemini chat error, falling back to local HR engine:', err);
+                // Continuar silenciosamente hacia el fallback local si Gemini falla
+            }
+        }
+        
+        // Fallback local:
+        return this._processHrIntentLocal(query);
+    },
+
+    _processHrIntentLocal(query) {
         query = query.toLowerCase();
         const data = window.App ? window.App.data : [];
         if (data.length === 0) return "La base de datos está vacía. Por favor, sincroniza el archivo CSV primero.";

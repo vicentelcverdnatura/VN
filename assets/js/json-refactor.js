@@ -691,11 +691,26 @@ class JSONRefactorer {
 
     /**
      * Punto de entrada unificado para la IA.
-     * No necesita token ni conexión. Trabaja 100% local.
+     * Prioriza Gemini API si está configurada. 
+     * Si no hay API Key o falla la conexión, usa el motor local como fallback.
      */
     async callAI(context, instruction, isGlobal = false) {
+        // Intentar usar Gemini si está configurado
+        if (window.GeminiService && window.GeminiService.isConfigured()) {
+            try {
+                this.addConsoleChat('⚡ Motor IA', `Enviando a <b>Gemini 2.0 Flash</b>: "${instruction}"`);
+                const result = await window.GeminiService.transformJSON(context, instruction, isGlobal);
+                this.addConsoleChat('⚡ Motor IA', `<span class="text-lime-400">Respuesta recibida de Gemini correctamente.</span>`);
+                return result;
+            } catch (geminiErr) {
+                this.addConsoleChat('⚠️ Gemini Error', `${geminiErr.message}. <span class="text-zinc-500">Usando motor local como fallback...</span>`);
+                console.warn('Gemini API error, falling back to local engine:', geminiErr);
+            }
+        }
+
+        // Fallback: Motor local basado en regex
+        this.addConsoleChat('🔧 Motor Local', `Procesando con el motor de reglas integrado.`);
         if (isGlobal) {
-            // Clonar para no mutar el original
             const clone = JSON.parse(JSON.stringify(context));
             return this.transformJSONRecursive(clone, instruction);
         } else {
